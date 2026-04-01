@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Haji's Restaurant - Authentic Pakistani & Indian Fusion</title>
+  <meta name="description" content="Haji's Restaurant — Premium Pakistani & Indian Fusion Kitchen. Order online for fast delivery.">
+  <meta name="keywords" content="Haji's Restaurant, Pakistani, Indian, Fusion, Biryani, Curry, Delivery, Takeout" />
+  <meta property="og:title" content="Haji's Restaurant | Authentic Pakistani & Indian Fusion" />
+  <meta property="og:description" content="Premium Pakistani and Indian fusion dishes. Order online for delivery or pickup." />
+  <meta property="og:image" content="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=1200&q=80" />
+  <meta property="og:url" content="https://hajisrestaurant.pages.dev/index.html" />
+  <meta property="og:type" content="website" />
+  <link rel="canonical" href="https://hajisrestaurant.pages.dev/index.html" />
+  <script type="application/ld+json">{
+    "@context":"https://schema.org",
+    "@type":"Restaurant",
+    "name":"Haji's Restaurant",
+    "telephone":"+923102041770",
+    "address":{
+      "@type":"PostalAddress",
+      "addressLocality":"Karachi",
+      "addressCountry":"PK"
+    },
+    "servesCuisine":"Pakistani, Indian"
+  }</script>
+  <link rel="stylesheet" href="style.css">
+  <script src="scripts.js" defer></script>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="nav-brand"><span class="red">HAJI'S</span><span class="sub">PAKISTANI & INDIAN FUSION</span></a>
+    <ul class="nav-links">
+      <li><a href="index.html" class="active">Home</a></li>
+      <li><a href="menu.html">Menu</a></li>
+      <li><a href="order.html">Order Online</a></li>
+      <li><a href="gallery.html">Gallery</a></li>
+      <li><a href="catering.html">Catering</a></li>
+      <li><a href="reviews.html">Reviews</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="contact.html">Contact</a></li>
+    </ul>
+    <button class="nav-toggle" onclick="document.getElementById('mob-menu').classList.toggle('open')">☰</button>
+  </div>
+  <div id="mob-menu" class="nav-mobile">
+    <a href="index.html">Home</a><a href="menu.html">Menu</a><a href="order.html">Order Online</a>
+    <a href="gallery.html">Gallery</a><a href="catering.html">Catering</a><a href="reviews.html">Reviews</a>
+    <a href="about.html">About</a><a href="contact.html">Contact</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg">
+    <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=1920&q=80" alt="Haji's BBQ Platter">
+    <div class="hero-overlay"></div>
+  </div>
+  <div class="hero-content">
+    <p class="welcome">Welcome to</p>
+    <h1><span>Haji's</span> <span class="red">Restaurant</span></h1>
+    <p class="subtitle">Pakistani and Indian Fusion Kitchen — Crafted with passion, served with love.</p>
+    <div class="hero-buttons">
+      <a href="menu.html" class="btn btn-primary">View Menu</a>
+      <a href="order.html" class="btn btn-outline-gold">Order Now</a>
+    </div>
+  </div>
+</section>
+
+<!-- WHY HAJIS -->
+<section class="section text-center">
+  <div class="container">
+    <p class="section-label">Discover</p>
+    <h2 class="section-title">Why Haji's?</h2>
+    <p class="section-desc">From sizzling biryanis to fusion curry pizzas — experience Pakistani & Indian flavors like never before.</p>
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+      <a href="menu.html" class="btn btn-primary">Explore Full Menu</a>
+      <a href="order.html" class="btn btn-outline-gold">Order Online</a>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT SECTION -->
+<section class="section section-card text-center">
+  <div class="container max-w-3xl">
+    <p class="section-label">Our Story</p>
+    <h2 class="section-title">About Haji's</h2>
+    <p class="section-desc">For over two decades, Haji's Restaurant has been serving the finest Pakistani BBQ and traditional cuisine. Our secret? Premium ingredients, time-honored recipes passed down through generations, and a passion for perfection in every dish we serve.</p>
+    <div class="features-row">
+      <div class="feature">
+        <div class="feature-icon">🔥</div>
+        <h3>Charcoal Grilled</h3>
+        <p style="color:var(--muted-fg);font-size:0.875rem">Authentic BBQ over real charcoal fire</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">⏱️</div>
+        <h3>Fast Delivery</h3>
+        <p style="color:var(--muted-fg);font-size:0.875rem">Hot food at your door within 45 minutes</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">📍</div>
+        <h3>Multiple Branches</h3>
+        <p style="color:var(--muted-fg);font-size:0.875rem">Conveniently located across the city</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <p style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:12px"><span class="red">HAJI'S</span> <span class="gold">RESTAURANT</span></p>
+        <p style="color:var(--muted-fg);font-size:0.875rem">Pakistani and Indian Fusion Kitchen — Crafted with passion, served with love.</p>
+      </div>
+      <div>
+        <h4>Quick Links</h4>
+        <a href="menu.html">Menu</a><a href="order.html">Order Online</a><a href="gallery.html">Gallery</a><a href="catering.html">Catering</a>
+      </div>
+      <div>
+        <h4>Connect</h4>
+        <a href="about.html">About Us</a><a href="reviews.html">Reviews</a><a href="contact.html">Contact</a>
+      </div>
+    </div>
+    <div class="footer-bottom">© 2026 Haji's Restaurant. All rights reserved.</div>
+  </div>
+</footer>
+
+</body>
+</html>

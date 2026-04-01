@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Menu - Haji's Restaurant</title>
+  <link rel="stylesheet" href="style.css">
+  <meta name="description" content="Haji's Restaurant menu - Pakistani and Indian fusion dishes including biryani, curries, pizzas, burgers, and more.">
+  <meta name="keywords" content="Haji's menu, Biryani, Curry, Pizza, Burgers, Vegan, Desserts">
+  <meta property="og:title" content="Menu - Haji's Restaurant" />
+  <meta property="og:description" content="Explore the full menu and add items to your order online." />
+  <meta property="og:image" content="https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=1200&q=80" />
+  <meta property="og:url" content="https://hajisrestaurant.pages.dev/menu.html" />
+  <link rel="canonical" href="https://hajisrestaurant.pages.dev/menu.html" />
+  <script type="application/ld+json">{
+    "@context":"https://schema.org",
+    "@type":"Menu",
+    "name":"Haji's Restaurant Menu",
+    "url":"https://hajisrestaurant.pages.dev/menu.html"
+  }</script>
+  <script src="scripts.js" defer></script>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="nav-brand"><span class="red">HAJI'S</span><span class="sub">PAKISTANI & INDIAN FUSION</span></a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li><li><a href="menu.html" class="active">Menu</a></li><li><a href="order.html">Order Online</a></li>
+      <li><a href="gallery.html">Gallery</a></li><li><a href="catering.html">Catering</a></li><li><a href="reviews.html">Reviews</a></li>
+      <li><a href="about.html">About</a></li><li><a href="contact.html">Contact</a></li>
+    </ul>
+    <button class="nav-toggle" onclick="document.getElementById('mob-menu').classList.toggle('open')">☰</button>
+  </div>
+  <div id="mob-menu" class="nav-mobile">
+    <a href="index.html">Home</a><a href="menu.html">Menu</a><a href="order.html">Order Online</a>
+    <a href="gallery.html">Gallery</a><a href="catering.html">Catering</a><a href="reviews.html">Reviews</a>
+    <a href="about.html">About</a><a href="contact.html">Contact</a>
+  </div>
+</nav>
+
+<div class="pt-20">
+<section class="section text-center">
+  <div class="container">
+    <p class="section-label">Our Specialties</p>
+    <h1 class="section-title">The Menu</h1>
+
+    <div class="menu-tabs" id="menu-tabs">
+      <button class="menu-tab active" data-cat="All">All</button>
+      <button class="menu-tab" data-cat="Biryani">Biryani</button>
+      <button class="menu-tab" data-cat="Curries">Curries</button>
+      <button class="menu-tab" data-cat="Curry Pizzas">Curry Pizzas</button>
+      <button class="menu-tab" data-cat="Vegan">Vegan</button>
+      <button class="menu-tab" data-cat="Brunch">Brunch</button>
+      <button class="menu-tab" data-cat="Bread & Naan">Bread & Naan</button>
+      <button class="menu-tab" data-cat="Burgers">Burgers</button>
+      <button class="menu-tab" data-cat="Wraps & Sides">Wraps & Sides</button>
+      <button class="menu-tab" data-cat="Drinks">Drinks</button>
+      <button class="menu-tab" data-cat="Desserts">Desserts</button>
+    </div>
+
+    <div class="grid grid-3" id="menu-grid"></div>
+  </div>
+</section>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div><p style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:12px"><span class="red">HAJI'S</span> <span class="gold">RESTAURANT</span></p><p style="color:var(--muted-fg);font-size:0.875rem">Pakistani and Indian Fusion Kitchen — Crafted with passion, served with love.</p></div>
+      <div><h4>Quick Links</h4><a href="menu.html">Menu</a><a href="order.html">Order Online</a><a href="gallery.html">Gallery</a><a href="catering.html">Catering</a></div>
+      <div><h4>Connect</h4><a href="about.html">About Us</a><a href="reviews.html">Reviews</a><a href="contact.html">Contact</a></div>
+    </div>
+    <div class="footer-bottom">© 2026 Haji's Restaurant. All rights reserved.</div>
+  </div>
+</footer>
+
+<a href="https://wa.me/923102041770" target="_blank" class="whatsapp-fab" aria-label="Chat on WhatsApp">📱</a>
+
+<script>
+const rawMenuItems = [
+  { name:"Chicken Biryani (Gluten Free)", desc:"Steamed Rice + Hajis Signature Boneless Chicken embedded with herbs and spices", price:18.50, cat:"Biryani" },
+  { name:"Goat Biryani (Gluten Free)", desc:"Steamed Rice + Hajis Signature Goat embedded with herbs and spices, steamed and cooked", price:21.50, cat:"Biryani" },
+  { name:"Paneer Biryani (GF)", desc:"Curry Infused with Rice - Hajis Signature Biryani made with Paneer", price:18.50, cat:"Biryani" },
+  { name:"Vegan Biryani (GF)", desc:"Curry Infused with Rice - Hajis Signature Biryani made with Tofu and Vegetables", price:18.50, cat:"Biryani" },
+  { name:"Vegetarian Biryani (GF)", desc:"Curry Infused with Rice - Marinated and Grilled Mixed Vegetables in Hajis Signature Biryani", price:16.50, cat:"Biryani" },
+  { name:"Palak Paneer (GF)", desc:"Paneer in pureed spinach enhanced with Hajis signature flavors", price:14.50, cat:"Curries" },
+  { name:"Paneer Tikka Masala (GF)", desc:"Creamy Curry with the right amount of balance in spices, herbs and cream with grilled paneer", price:15.75, cat:"Curries" },
+  { name:"Choley Bhature (NF)", desc:"Crafty Chick Peas Curry with Bhatura (2 pcs)", price:16.50, cat:"Curries" },
+  { name:"Vegetable Tikka Masala (GF)", desc:"Creamy Curry with balance in spices, herbs and cream served with grilled vegetables", price:15.75, cat:"Curries" },
+  { name:"Daal Makhni (GF)", desc:"A balanced and crafty blend of lentils & Cream", price:14.50, cat:"Curries" },
+  { name:"Spinach & Potato (GF)", desc:"A balanced blend of Spinach, Cream and Potatoes", price:14.50, cat:"Curries" },
+  { name:"Chicken Tikka Pizza", desc:"Hajis Signature Chicken Tikka Masala on a Flat Bread. Regular or Gluten Free Dough", price:15.99, cat:"Curry Pizzas" },
+  { name:"Paneer Tikka Pizza (Vegetarian)", desc:"Hajis Signature Paneer Tikka Masala on a Flat Bread. Regular or Gluten Free Dough", price:15.99, cat:"Curry Pizzas" },
+  { name:"Mixed Vegetables Pizza (Vegetarian)", desc:"Mixed Vegetables enhanced with Hajis Flavors on a Flat Bread", price:15.99, cat:"Curry Pizzas" },
+  { name:"Pepperoni Pizza", desc:"Hajis Signature and Best Seller Pepperoni Pizza. Regular or Gluten Free Dough", price:16.50, cat:"Curry Pizzas" },
+  { name:"Chana Masala (GF) — VEGAN", desc:"Crafty Chick Peas Curry (A la Carte)", price:13.50, cat:"Vegan" },
+  { name:"Baingan Bharta (GF) — VEGAN", desc:"Smoky mashed eggplant cooked with onions, tomatoes, garlic, ginger and spices", price:13.50, cat:"Vegan" },
+  { name:"Bhindi Masala (GF) — VEGAN", desc:"Okra cooked in Hajis Signature Spices for an immaculate vegan experience", price:13.50, cat:"Vegan" },
+  { name:"Vegan Tikka Masala (GF)", desc:"Made with Tofu, Coconut Yogurt, Coconut Milk", price:16.75, cat:"Vegan" },
+  { name:"Vegan Daal Makhni (GF)", desc:"A balanced and crafty blend of lentils & Cream (substitute)", price:14.50, cat:"Vegan" },
+  { name:"Aalo Tarkari (GF) — VEGAN", desc:"Crafty Potato Curry", price:13.50, cat:"Vegan" },
+  { name:"Vegan Spinach with Tofu (GF)", desc:"Tofu in pureed spinach enhanced with Hajis signature flavor", price:16.75, cat:"Vegan" },
+  { name:"Chana Daal (GF) — VEGAN", desc:"Chana Lentil cooked Pakistani Style", price:14.50, cat:"Vegan" },
+  { name:"Halwa Poori (NF)", desc:"Authentic Pakistani Breakfast - Potato Curry, Chana Masala, Suji Halwa, Deep Fried Tortillas, Pickles", price:16.50, cat:"Brunch" },
+  { name:"Brunch Platter (NF)", desc:"Lacha Paratha, Goat Shami, Aalo Tarkari, Chana Masala, Pickle + Karak Chai", price:18.50, cat:"Brunch" },
+  { name:"Basmati Rice (GF)", desc:"Plain Rice", price:4.75, cat:"Bread & Naan" },
+  { name:"Hajis Qulcha Naan (NF)", desc:"Sesame Seeds, Milk, Yogurt applied to Naan Dough", price:2.99, cat:"Bread & Naan" },
+  { name:"Hajis Butter Naan (NF)", desc:"Hajis Special Naan + Butter", price:3.50, cat:"Bread & Naan" },
+  { name:"Hajis Garlic Naan (NF)", desc:"Hajis Special Naan + Garlic + Butter", price:4.50, cat:"Bread & Naan" },
+  { name:"Tandoori Roti (NF)", desc:"Wheat Roti made in Tandoor - Add Butter + 0.75", price:2.99, cat:"Bread & Naan" },
+  { name:"Cheese Naan (NF)", desc:"Hajis Special Naan infused with Cheese", price:6.50, cat:"Bread & Naan" },
+  { name:"Roti (Vegan) 2 pcs — VEGAN", desc:"Tawa Roti - House-Made Wheat Tortillas", price:3.50, cat:"Bread & Naan" },
+  { name:"Poori Paratha (NF)", desc:"House Deep Fried Paratha - Pakistani Style", price:3.50, cat:"Bread & Naan" },
+  { name:"Poori (NF)", desc:"House Deep Fried Paratha", price:2.99, cat:"Bread & Naan" },
+  { name:"Bhatura (NF)", desc:"House Deep Fried Paratha", price:2.99, cat:"Bread & Naan" },
+  { name:"Lacha Paratha (NF)", desc:"Pan Fried, Twisted and Turned Spirally Shallow Fried Paratha", price:4.99, cat:"Bread & Naan" },
+  { name:"Veggie Burger (Double) (NF)", desc:"Hajis Veggie Patty + Lettuce, Tomato, Onions, Dirty Sauce, Hajis Sauces", price:12.99, cat:"Burgers" },
+  { name:"Cheese Burger (NF)", desc:"Juicy Beef Patty with Lettuce, Tomato, Dirty Sauce, and House Blend Sauces", price:13.99, cat:"Burgers" },
+  { name:"Chicken Burger (Double) (NF)", desc:"Chicken Patty with Lettuce, Tomato, Dirty Sauce, and House Blend Sauces", price:13.99, cat:"Burgers" },
+  { name:"Chapli Burger (NF)", desc:"Chapli Beef Patty with Lettuce, Tomato, Dirty Sauce, and House Blend Sauces", price:13.99, cat:"Burgers" },
+  { name:"Fried Chicken Burger (NF)", desc:"Hajis Fried Chicken, served between the buns", price:13.99, cat:"Burgers" },
+  { name:"Chicken Wrap (NF)", desc:"BBQ Chicken Breast (Boneless), Salad, House Sauces Rolled in Poori Paratha", price:12.99, cat:"Wraps & Sides" },
+  { name:"Paneer Tikka Wrap (NF)", desc:"Grilled Paneer, Salad, House Sauces Rolled in Poori Paratha (Vegetarian)", price:11.99, cat:"Wraps & Sides" },
+  { name:"Fries", desc:"Crispy golden fries", price:5.99, cat:"Wraps & Sides" },
+  { name:"Onion Rings", desc:"Crispy battered onion rings", price:6.99, cat:"Wraps & Sides" },
+  { name:"Plain Rice (NF)(GF)", desc:"Steamed basmati rice", price:4.75, cat:"Wraps & Sides" },
+  { name:"Grilled Vegetables (NF)(GF)", desc:"Fresh grilled seasonal vegetables", price:7.50, cat:"Wraps & Sides" },
+  { name:"Mint Lemonade", desc:"House Made Lemonade", price:5.50, cat:"Drinks" },
+  { name:"Mango Lassi", desc:"Yogurt + Mango Smoothie - Done Hajis Style", price:5.50, cat:"Drinks" },
+  { name:"Iced Tea", desc:"Hajis Iced Tea", price:4.50, cat:"Drinks" },
+  { name:"Cold Coffee", desc:"Hajis Signature Cold Coffee, Served with Whip Cream", price:6.99, cat:"Drinks" },
+  { name:"Specialty Soda [Salam Cola]", desc:"Diet / Regular / Orange", price:3.50, cat:"Drinks" },
+  { name:"Turkish Soda", desc:"Honey Doo / Cranberry / Watermelon / Pomegranate", price:3.50, cat:"Drinks" },
+  { name:"Pellegrino", desc:"Premium sparkling water", price:3.50, cat:"Drinks" },
+  { name:"Karak Chai (Hot)", desc:"Pakistani Style Chai Tea", price:2.99, cat:"Drinks" },
+  { name:"Saffron Chai (Hot)", desc:"Pakistani Style Saffron Chai Tea", price:3.99, cat:"Drinks" },
+  { name:"Kashmiri Chai", desc:"Pink tea from Northern Pakistan", price:4.99, cat:"Drinks" },
+  { name:"Gajar Halwa (Carrot Dessert)", desc:"Very Unique and Authentic Dessert - Carrot, Khoa, Nuts – Made Desi Style", price:9.75, cat:"Desserts" },
+  { name:"Qulfi Falooda", desc:"Hajis Signature House-Made Ice Cream, Rice Noodles, Strawberry Jelly, Nuts", price:9.50, cat:"Desserts" },
+  { name:"Rice Pudding", desc:"Hajis House-Made Kheer passed and refined over multiple generations", price:6.99, cat:"Desserts" },
+  { name:"Mango Ice Cream", desc:"Hajis House-Made Mango Ice Cream", price:5.99, cat:"Desserts" },
+  { name:"Suji Halwa", desc:"Toasted and Sweetened Semolina Dessert", price:6.99, cat:"Desserts" },
+];
+
+const imgs = [
+  "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=640&q=70",
+  "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=640&q=70",
+  "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=640&q=70",
+  "https://images.unsplash.com/photo-1631515243349-e0cb75fb8d3a?w=640&q=70",
+  "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=640&q=70",
+];
+
+const menuItems = rawMenuItems.map((item, index) => ({ ...item, id: index }));
+const grid = document.getElementById('menu-grid');
+let activeCat = 'All';
+
+function render() {
+  const items = activeCat === 'All' ? menuItems : menuItems.filter(i => i.cat === activeCat);
+  grid.innerHTML = items.map((item) => {
+    return `
+    <div class="menu-card">
+      <div class="menu-card-img"><img src="${imgs[item.id % imgs.length]}" alt="${item.name}" loading="lazy"></div>
+      <div class="menu-card-body">
+        <div class="menu-card-header"><h3>${item.name}</h3><span class="menu-card-price">$${item.price.toFixed(2)}</span></div>
+        <p>${item.desc}</p>
+        <button class="btn-add" onclick="addToCart(${item.id})">➕ Add to Cart</button>
+      </div>
+    </div>
+    `;
+  }).join('');
+}
+
+window.hajisMenuItems = menuItems;
+
+if (typeof window.initMenuItemsGlobal === 'function') {
+  window.initMenuItemsGlobal(menuItems);
+}
+
+document.querySelectorAll('.menu-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.menu-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeCat = btn.dataset.cat;
+    render();
+  });
+});
+
+render();
+</script>
+</body>
+</html>
