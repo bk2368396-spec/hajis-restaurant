@@ -18,6 +18,9 @@
     "url":"https://hajisrestaurant.pages.dev/menu.html"
   }</script>
   <script src="scripts.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', updateCartDisplay);
+  </script>
 </head>
 <body>
 
@@ -29,6 +32,7 @@
       <li><a href="gallery.html">Gallery</a></li><li><a href="catering.html">Catering</a></li><li><a href="reviews.html">Reviews</a></li>
       <li><a href="about.html">About</a></li><li><a href="contact.html">Contact</a></li>
     </ul>
+    <div class="cart-icon" id="cart-icon" onclick="checkout()" style="display:none;">🛒 <span id="cart-count">0</span></div>
     <button class="nav-toggle" onclick="document.getElementById('mob-menu').classList.toggle('open')">☰</button>
   </div>
   <div id="mob-menu" class="nav-mobile">
@@ -68,15 +72,58 @@
 <footer class="footer">
   <div class="container">
     <div class="footer-grid">
-      <div><p style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:12px"><span class="red">HAJI'S</span> <span class="gold">RESTAURANT</span></p><p style="color:var(--muted-fg);font-size:0.875rem">Pakistani and Indian Fusion Kitchen — Crafted with passion, served with love.</p></div>
-      <div><h4>Quick Links</h4><a href="menu.html">Menu</a><a href="order.html">Order Online</a><a href="gallery.html">Gallery</a><a href="catering.html">Catering</a></div>
-      <div><h4>Connect</h4><a href="about.html">About Us</a><a href="reviews.html">Reviews</a><a href="contact.html">Contact</a></div>
+      <div>
+        <p style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:12px"><span class="red">HAJI'S</span> <span class="gold">RESTAURANT</span></p>
+        <p style="color:var(--muted-fg);font-size:0.875rem">Pakistani and Indian Fusion Kitchen — Crafted with passion, served with love.</p>
+        <div class="footer-links">
+          <a href="#">Terms & Policies</a>
+          <a href="#">Accessibility Statement</a>
+        </div>
+      </div>
+      <div class="footer-contact">
+        <h4>Contact Info</h4>
+        <p><span class="icon">📞</span> (650) 507-3959</p>
+        <p><span class="icon">✉️</span> Hajisstaff@gmail.com</p>
+      </div>
+      <div>
+        <h4>Newsletter</h4>
+        <div class="newsletter-signup">
+          <input type="email" placeholder="Enter your email">
+          <button>Send</button>
+        </div>
+      </div>
+      <div class="footer-locations">
+        <h4>Locations</h4>
+        <ul>
+          <li>Hajis Restaurant Menlo Park</li>
+          <li>San Jose</li>
+        </ul>
+      </div>
     </div>
     <div class="footer-bottom">© 2026 Haji's Restaurant. All rights reserved.</div>
   </div>
 </footer>
 
 <a href="https://wa.me/92310241770" target="_blank" class="whatsapp-fab" aria-label="Chat on WhatsApp">📱</a>
+
+<!-- Floating Cart Button -->
+<button class="floating-cart-btn" onclick="toggleCartSidebar()" style="display:none;">
+  🛒 <span class="floating-cart-count">0</span>
+</button>
+
+<!-- Floating Cart Sidebar -->
+<div class="floating-cart-sidebar">
+  <div class="floating-cart-header">
+    <h3>Your Cart</h3>
+    <button class="floating-cart-close" onclick="toggleCartSidebar()">×</button>
+  </div>
+  <div class="cart-panel-content">
+    <p class="empty-cart">Your cart is empty</p>
+  </div>
+</div>
+
+<!-- Cart Toast -->
+<div class="cart-toast"></div>
 
 <!-- Live tracking panel -->
 <div id="live-tracking" class="live-tracking" style="display:none;">
@@ -106,11 +153,11 @@
 
 <script>
 const rawMenuItems = [
-  { name:"Chicken Biryani (Gluten Free)", desc:"Steamed Rice + Hajis Signature Boneless Chicken embedded with herbs and spices", price:18.50, cat:"Biryani" },
-  { name:"Goat Biryani (Gluten Free)", desc:"Steamed Rice + Hajis Signature Goat embedded with herbs and spices, steamed and cooked", price:21.50, cat:"Biryani" },
-  { name:"Paneer Biryani (GF)", desc:"Curry Infused with Rice - Hajis Signature Biryani made with Paneer", price:18.50, cat:"Biryani" },
-  { name:"Vegan Biryani (GF)", desc:"Curry Infused with Rice - Hajis Signature Biryani made with Tofu and Vegetables", price:18.50, cat:"Biryani" },
-  { name:"Vegetarian Biryani (GF)", desc:"Curry Infused with Rice - Marinated and Grilled Mixed Vegetables in Hajis Signature Biryani", price:16.50, cat:"Biryani" },
+  { id:1, name:"Chicken Biryani (Gluten Free)", desc:"Steamed Rice + Hajis Signature Boneless Chicken embedded with herbs and spices", price:18.50, cat:"Biryani" },
+  { id:2, name:"Goat Biryani (Gluten Free)", desc:"Steamed Rice + Hajis Signature Goat embedded with herbs and spices, steamed and cooked", price:21.50, cat:"Biryani" },
+  { id:3, name:"Paneer Biryani (GF)", desc:"Curry Infused with Rice - Hajis Signature Biryani made with Paneer", price:18.50, cat:"Biryani" },
+  { id:4, name:"Vegan Biryani (GF)", desc:"Curry Infused with Rice - Hajis Signature Biryani made with Tofu and Vegetables", price:18.50, cat:"Biryani" },
+  { id:5, name:"Vegetarian Biryani (GF)", desc:"Curry Infused with Rice - Marinated and Grilled Mixed Vegetables in Hajis Signature Biryani", price:16.50, cat:"Biryani" },
   { name:"Palak Paneer (GF)", desc:"Paneer in pureed spinach enhanced with Hajis signature flavors", price:14.50, cat:"Curries" },
   { name:"Paneer Tikka Masala (GF)", desc:"Creamy Curry with the right amount of balance in spices, herbs and cream with grilled paneer", price:15.75, cat:"Curries" },
   { name:"Choley Bhature (NF)", desc:"Crafty Chick Peas Curry with Bhatura (2 pcs)", price:16.50, cat:"Curries" },
@@ -178,6 +225,9 @@ const menuImageMap = {
   'Vegan Biryani (GF)': 'Vegan Daal Makhni.jpg',
   'Vegetarian Biryani (GF)': 'Biryani 5.jpg',
   'Palak Paneer (GF)': 'Palak Paneer(1).jpg',
+  'Shami Kabab': 'Shami Kebab(2).jpg',
+  'Aalo Tikki': 'Aloo Tarkari.jpg',
+  'Aloo Tikki': 'Aloo Tarkari.jpg',
   'Paneer Tikka Masala (GF)': 'Paneer Tikka Masala.jpg',
   'Choley Bhature (NF)': 'Cholay Bhaturay .jpg',
   'Vegetable Tikka Masala (GF)': 'Mix Veg Tikka Masala.jpg',
@@ -257,8 +307,29 @@ const availableImages = new Set([
 ]);
 
 function getMenuImage(name) {
-  const filename = menuImageMap[name];
-  return filename && availableImages.has(filename) ? filename : null;
+  if (!name) return null;
+
+  const key = name.trim();
+  // direct match
+  let filename = menuImageMap[key] || menuImageMap[key.toLowerCase()];
+
+  // fallback to case-insensitive match on map keys
+  if (!filename) {
+    const foundKey = Object.keys(menuImageMap).find(k => k.toLowerCase() === key.toLowerCase());
+    if (foundKey) filename = menuImageMap[foundKey];
+  }
+
+  // fallback to exact file name, case-insensitive in availableImages
+  if (filename && !availableImages.has(filename)) {
+    const normalized = filename.toLowerCase();
+    const existing = Array.from(availableImages).find(img => img.toLowerCase() === normalized);
+    filename = existing || null;
+  }
+
+  if (filename && availableImages.has(filename)) return filename;
+
+  // last resort placeholder
+  return 'placeholder.jpg';
 }
 
 window.defaultMenuItems = rawMenuItems.map((item, index) => ({ ...item, id: item.id || index }));
@@ -397,12 +468,66 @@ window.addEventListener('storage', (event) => {
     menuItems = safeGetMenu();
     render();
   }
+  if (event.key === 'hajis_orders' || event.key === 'hajis_restaurant_orders') {
+    checkOrderTracking();
+  }
 });
 
 window.addEventListener('hajis_menu_updated', () => {
   menuItems = safeGetMenu();
   render();
 });
+
+let trackingInterval;
+
+function checkOrderTracking() {
+  const currentOrderId = localStorage.getItem('currentOrderId');
+  if (!currentOrderId) {
+    document.getElementById('live-tracking').style.display = 'none';
+    if (trackingInterval) {
+      clearInterval(trackingInterval);
+      trackingInterval = null;
+    }
+    return;
+  }
+
+  const orders = JSON.parse(localStorage.getItem('hajis_orders') || localStorage.getItem('hajis_restaurant_orders') || '[]');
+  const order = orders.find(o => o.id == currentOrderId);
+  if (!order || order.status !== 'accepted' || !order.deliveryMinutes || !order.acceptedAt) {
+    document.getElementById('live-tracking').style.display = 'none';
+    if (trackingInterval) {
+      clearInterval(trackingInterval);
+      trackingInterval = null;
+    }
+    return;
+  }
+
+  // Calculate remaining time
+  const acceptedAt = new Date(order.acceptedAt).getTime();
+  const elapsedSec = Math.floor((Date.now() - acceptedAt) / 1000);
+  const remainingSec = Math.max(0, Math.round(order.deliveryMinutes * 60 - elapsedSec));
+
+  if (remainingSec <= 0) {
+    document.getElementById('live-tracking').style.display = 'none';
+    if (trackingInterval) {
+      clearInterval(trackingInterval);
+      trackingInterval = null;
+    }
+    return;
+  }
+
+  const m = Math.floor(remainingSec / 60);
+  const s = remainingSec % 60;
+  document.getElementById('tracking-timer').textContent = `${m}:${s.toString().padStart(2, '0')}`;
+  document.getElementById('live-tracking').style.display = 'block';
+
+  // Start interval to update timer every second
+  if (!trackingInterval) {
+    trackingInterval = setInterval(() => {
+      checkOrderTracking(); // Re-check and update
+    }, 1000);
+  }
+}
 
 document.querySelectorAll('.menu-tab').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -426,11 +551,110 @@ function renderMenuOnReady() {
 }
 
 document.addEventListener('DOMContentLoaded', renderMenuOnReady);
+document.addEventListener('DOMContentLoaded', checkOrderTracking);
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', renderMenuOnReady);
+  document.addEventListener('DOMContentLoaded', checkOrderTracking);
 } else {
   setTimeout(renderMenuOnReady, 100);
+  setTimeout(checkOrderTracking, 100);
+}
+</script>
+
+<!-- Floating Chat Button -->
+<button class="help-fab" onclick="openChat()">💬</button>
+
+<!-- Chat Popup -->
+<div id="help-popup" class="help-popup">
+  <div class="chat-header" style="background:#cc0000 !important;color:#fff !important;">
+    <h3 style="color:#fff !important;">Haji's Support Bot</h3>
+    <button class="chat-close" onclick="closeChat()">×</button>
+  </div>
+  <div class="chat-messages" id="chat-messages">
+    <div class="message bot">Hello! Welcome to Haji's Support.</div>
+  </div>
+  <div class="chat-input-area">
+    <textarea id="chat-input" placeholder="Type your message..." rows="3"></textarea>
+    <button id="hajiSendBtn" style="background:#cc0000 !important;color:#fff !important;border:1px solid #cc0000 !important;" onclick="sendMessage()">Send to Haji's</button>
+  </div>
+</div>
+
+<script>
+let chatInterval = null;
+
+function openChat() {
+  document.getElementById('help-popup').style.display = 'flex';
+  loadCustomerChat();
+  chatInterval = setInterval(loadCustomerChat, 2000);
+}
+
+function closeChat() {
+  document.getElementById('help-popup').style.display = 'none';
+  if (chatInterval) {
+    clearInterval(chatInterval);
+    chatInterval = null;
+  }
+}
+
+function loadCustomerChat() {
+  const messages = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+  const chatMessages = document.getElementById('chat-messages');
+  // Keep the welcome message
+  const welcome = chatMessages.querySelector('.message.bot');
+  chatMessages.innerHTML = '';
+  if (welcome) chatMessages.appendChild(welcome.cloneNode(true));
+  // Add all customer messages and admin replies
+  messages.filter(m => m.name === 'Chat User').forEach(m => {
+    addMessage(m.message, 'user');
+    if (m.replies) {
+      m.replies.forEach(r => {
+        addMessage(r.message, 'bot');
+      });
+    }
+  });
+  // Scroll to bottom
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const message = input.value.trim();
+  if (!message) return;
+
+  // Add user message to chat
+  addMessage(message, 'user');
+  input.value = '';
+
+  // Save to localStorage immediately
+  const helpRequests = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+  helpRequests.push({
+    name: 'Chat User',
+    phone: 'Chat Support',
+    message: message,
+    timestamp: new Date().toISOString(),
+    read: false,
+    replies: []
+  });
+  localStorage.setItem('hajis_customer_help', JSON.stringify(helpRequests));
+  // Dispatch storage event for real-time updates
+  window.dispatchEvent(new StorageEvent('storage', { key: 'hajis_customer_help' }));
+  // Update chat immediately
+  loadCustomerChat();
+
+  // Show auto-reply message after 2 seconds
+  setTimeout(() => {
+    addMessage('Your message has been forwarded to our management.', 'bot');
+  }, 2000);
+}
+
+function addMessage(text, type) {
+  const messagesDiv = document.getElementById('chat-messages');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `message ${type}`;
+  messageDiv.textContent = text;
+  messagesDiv.appendChild(messageDiv);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 </script>
 </body>

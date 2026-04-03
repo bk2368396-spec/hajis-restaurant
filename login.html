@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Login - Haji's Restaurant</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { background: radial-gradient(circle at top, #1f1f1f,#050505); color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; min-height: 100vh; }
+    .login-wrapper { display:flex; align-items:center; justify-content:center; padding:60px 15px; }
+    .login-card { width:min(420px,100%); background:#0c0c0c; border:2px solid #d4af37; border-radius:14px; box-shadow:0 0 30px rgba(0,0,0,0.8); padding:26px; }
+    .login-card h1 { color:#ffd700; margin-bottom:12px; font-size:1.8rem; letter-spacing:1.1px; }
+    .form-group { margin-bottom:14px; }
+    .form-group input { width:100%; padding:10px; border:1px solid #444; border-radius:8px; background:#101010; color:#fff; }
+    .btn-primary { width:100%; border:1px solid #ffd700; background:#ffd700; color:#111; font-weight:700; padding:10px; border-radius:8px; cursor:pointer; }
+    .error-text { color:#ff6b6b; margin-top:8px; display:none; }
+    .brand { text-align:center; margin-bottom:16px; }
+    .brand h2 { margin:0; color:#fff; font-size:1.2rem; }
+    .brand p { margin:6px 0 0; color:#ddd; font-size:0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="login-wrapper">
+    <div class="login-card">
+      <div class="brand">
+        <h2>Haji's Restaurant Admin</h2>
+        <p>Secure access to orders and customer management</p>
+      </div>
+      <h1>Sign in</h1>
+      <div class="form-group"><input id="admin-username" type="text" placeholder="Username" value="Danish" autofocus /></div>
+      <div class="form-group"><input id="admin-password" type="password" placeholder="Password" value="Haji123" /></div>
+      <div class="form-group"><button class="btn-primary" onclick="loginAdmin()">Login</button></div>
+      <p id="login-error" class="error-text">Invalid credentials. Use Danish / Haji123.</p>
+    </div>
+  </div>
+
+  <script src="scripts.js"></script>
+  <script>
+  function loginAdmin() {
+    const user = (document.getElementById('admin-username').value || '').trim();
+    const pass = (document.getElementById('admin-password').value || '').trim();
+    const err = document.getElementById('login-error');
+    if (user === 'Danish' && pass === 'Haji123') {
+      localStorage.setItem('isAdminLoggedIn', 'true');
+      localStorage.setItem('isLoggedIn', 'true');
+      sessionStorage.setItem('isLoggedIn', 'true');
+      window.location.href = 'admin.html';
+      return;
+    }
+    err.style.display = 'block';
+  }
+  </script>
+</body>
+</html>

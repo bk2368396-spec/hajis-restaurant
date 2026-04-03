@@ -17,6 +17,424 @@
     "actionStatus":"PotentialActionStatus"
   }</script>
   <script src="scripts.js" defer></script>
+  <script>
+    function loadCart() {
+      const cart = getCart();
+      const emptyCart = document.getElementById('empty-cart');
+      const cartContainer = document.getElementById('cart-container');
+      const orderFormSection = document.querySelector('.form-card').parentElement;
+      const cartTableBody = document.getElementById('cart-table-body');
+      const cartTotal = document.getElementById('cart-total');
+
+      if (cart.length === 0) {
+        emptyCart.style.display = 'block';
+        cartContainer.style.display = 'none';
+        orderFormSection.style.display = 'none';
+        return;
+      }
+
+      emptyCart.style.display = 'none';
+      cartContainer.style.display = 'block';
+      orderFormSection.style.display = 'block';
+
+      cartTableBody.innerHTML = '';
+      let total = 0;
+
+      cart.forEach(item => {
+        const quantity = item.quantity || 1;
+        const itemTotal = item.price * quantity;
+        total += itemTotal;
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td style="padding:6px">${item.name}</td>
+          <td style="text-align:right;padding:6px">$${item.price.toFixed(2)}</td>
+          <td style="text-align:center;padding:6px">
+            <input type="number" min="1" value="${quantity}" onchange="updateQuantity(${item.id}, this.value)" style="width:50px;text-align:center;">
+          </td>
+          <td style="text-align:right;padding:6px">$${itemTotal.toFixed(2)}</td>
+          <td style="text-align:center;padding:6px">
+            <button onclick="removeFromCart(${item.id})" style="background:none;border:none;color:#ff6b6b;cursor:pointer;">✕</button>
+          </td>
+        `;
+        cartTableBody.appendChild(row);
+      });
+
+      cartTotal.textContent = `$${total.toFixed(2)}`;
+    }
+
+    function processOrder() {
+      const cart = getCart();
+      const name = document.getElementById('customer-name').value.trim();
+      const phone = document.getElementById('customer-phone').value.trim();
+      const address = document.getElementById('customer-address').value.trim();
+      const errorElement = document.getElementById('order-error');
+
+      // Validate cart
+      if (cart.length === 0) {
+        errorElement.textContent = 'Your cart is empty!';
+        errorElement.style.display = 'block';
+        return;
+      }
+
+      // Validate form fields
+      if (!name) {
+        errorElement.textContent = 'Please enter your full name.';
+        errorElement.style.display = 'block';
+        document.getElementById('customer-name').focus();
+        return;
+      }
+
+      if (!phone) {
+        errorElement.textContent = 'Please enter your phone number.';
+        errorElement.style.display = 'block';
+        document.getElementById('customer-phone').focus();
+        return;
+      }
+
+      if (!address) {
+        errorElement.textContent = 'Please enter your delivery address.';
+        errorElement.style.display = 'block';
+        document.getElementById('customer-address').focus();
+        return;
+      }
+
+      // All validations passed
+      errorElement.style.display = 'none';
+
+      // Create order
+      const orderId = Date.now();
+      const order = {
+        id: orderId,
+        name,
+        phone,
+        address,
+        cart,
+        status: 'pending',
+        timestamp: new Date().toISOString()
+      };
+
+      let orders = JSON.parse(localStorage.getItem('hajis_orders')) || [];
+      orders.push(order);
+      const payload = JSON.stringify(orders);
+      localStorage.setItem('hajis_orders', payload);
+      localStorage.setItem('hajis_restaurant_orders', payload);
+      localStorage.setItem('hajis_orders_ts', Date.now().toString());
+      localStorage.setItem('hajis_restaurant_orders_ts', Date.now().toString());
+      localStorage.setItem('currentOrderId', orderId.toString());
+      window.dispatchEvent(new StorageEvent('storage', { key: 'hajis_orders' }));
+
+      // Toggle headings
+      document.getElementById('form-heading').style.display = 'none';
+      document.getElementById('processing-heading').style.display = 'block';
+
+      document.getElementById('order-form').style.display = 'none';
+      document.getElementById('order-status-panel').style.display = 'block';
+      document.getElementById('order-status-text').textContent = 'Please wait while we confirm your order...';
+
+      // Start checking order status
+      checkOrderStatus();
+    }
+
+    let orderTimerInterval = null;
+    let orderTimerRemaining = 0;
+
+    function clearOrderTimer() {
+      if (orderTimerInterval) {
+        clearInterval(orderTimerInterval);
+        orderTimerInterval = null;
+      }
+    }
+
+    function updateOrderTimerDisplay() {
+      const timerElement = document.getElementById('order-success-timer');
+      if (!timerElement || orderTimerRemaining === null || orderTimerRemaining === undefined) return;
+      const minutesLeft = Math.floor(orderTimerRemaining / 60);
+      const seconds = orderTimerRemaining % 60;
+      timerElement.textContent = `${minutesLeft}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    function setOrderCancelledUI() {
+      clearOrderTimer();
+      document.getElementById('order-status-panel').style.display = 'none';
+      document.getElementById('order-success').style.display = 'none';
+      document.getElementById('order-delivered').style.display = 'none';
+      document.getElementById('order-cancelled').style.display = 'block';
+      const cancelledText = document.querySelector('#order-cancelled p');
+      if (cancelledText) {
+        cancelledText.textContent = "Sorry! Your order has been cancelled by Haji's Restaurant.";
+      }
+      const cancelledLabel = document.createElement('div');
+      cancelledLabel.style = 'color:#fff; background:#d90429; padding:10px 12px; margin-top:8px; border-radius:6px; font-weight:700;';
+      cancelledLabel.textContent = 'Cancelled';
+      const existingLabel = document.getElementById('cancelled-status-label');
+      if (!existingLabel) {
+        cancelledLabel.id = 'cancelled-status-label';
+        document.getElementById('order-cancelled').appendChild(cancelledLabel);
+      }
+    }
+
+    function setOrderAcceptedUI(order) {
+      document.getElementById('order-status-panel').style.display = 'none';
+      document.getElementById('order-cancelled').style.display = 'none';
+      document.getElementById('order-delivered').style.display = 'none';
+      document.getElementById('order-success').style.display = 'block';
+      document.querySelector('#order-success h2').textContent = 'Yum! Your Order is Confirmed! 🍛';
+      clearCart();
+      startOrderTimer(order.deliveryMinutes || 0);
+    }
+
+    function checkOrderStatus() {
+      const currentOrderId = localStorage.getItem('currentOrderId');
+      if (!currentOrderId) return;
+
+      const orders = JSON.parse(localStorage.getItem('hajis_orders') || localStorage.getItem('hajis_restaurant_orders') || '[]');
+      const order = orders.find(o => o.id == currentOrderId);
+      if (!order) {
+        console.warn('Order not found:', currentOrderId);
+        return;
+      }
+
+      if (order.status === 'accepted' && order.deliveryMinutes) {
+        setOrderAcceptedUI(order);
+      } else if (order.status === 'overdue') {
+        clearOrderTimer();
+        document.getElementById('order-status-panel').style.display = 'none';
+        document.getElementById('order-success').style.display = 'block';
+        document.getElementById('order-cancelled').style.display = 'none';
+        document.getElementById('order-delivered').style.display = 'none';
+        document.querySelector('#order-success h2').textContent = 'Order is Late — We are working on delivery';
+      } else if (order.status === 'completed') {
+        clearOrderTimer();
+        stopStatusPolling();
+        document.getElementById('order-status-panel').style.display = 'none';
+        document.getElementById('order-success').style.display = 'none';
+        document.getElementById('order-cancelled').style.display = 'none';
+        document.getElementById('order-delivered').style.display = 'block';
+      } else if (order.status === 'cancelled') {
+        clearOrderTimer();
+        stopStatusPolling();
+        setOrderCancelledUI();
+      }
+    }
+
+    function startOrderTimer(minutes) {
+      clearOrderTimer();
+
+      // Initial calculation and display
+      const currentOrderId = localStorage.getItem('currentOrderId');
+      if (currentOrderId) {
+        const orders = JSON.parse(localStorage.getItem('hajis_orders') || localStorage.getItem('hajis_restaurant_orders') || '[]');
+        const order = orders.find(o => o.id == currentOrderId);
+        if (order && order.status === 'accepted' && order.deliveryMinutes && order.acceptedAt) {
+          const acceptedAt = new Date(order.acceptedAt).getTime();
+          const elapsedSec = Math.floor((Date.now() - acceptedAt) / 1000);
+          orderTimerRemaining = Math.max(0, Math.round(order.deliveryMinutes * 60 - elapsedSec));
+          updateOrderTimerDisplay();
+        }
+      }
+
+      orderTimerInterval = setInterval(() => {
+        const currentOrderId = localStorage.getItem('currentOrderId');
+        if (!currentOrderId) {
+          clearOrderTimer();
+          return;
+        }
+
+        const orders = JSON.parse(localStorage.getItem('hajis_orders') || localStorage.getItem('hajis_restaurant_orders') || '[]');
+        const order = orders.find(o => o.id == currentOrderId);
+        if (!order || order.status !== 'accepted' || !order.deliveryMinutes || !order.acceptedAt) {
+          clearOrderTimer();
+          return;
+        }
+
+        const acceptedAt = new Date(order.acceptedAt).getTime();
+        const elapsedSec = Math.floor((Date.now() - acceptedAt) / 1000);
+        const remainingSec = Math.max(0, Math.round(order.deliveryMinutes * 60 - elapsedSec));
+
+        if (remainingSec <= 0) {
+          clearOrderTimer();
+          // Timer expired, but don't show delivered screen - wait for admin to mark as completed
+          document.querySelector('#order-success h2').textContent = 'Your order is ready! Waiting for delivery confirmation...';
+          return;
+        }
+
+        // Update the global remaining for display
+        orderTimerRemaining = remainingSec;
+        updateOrderTimerDisplay();
+      }, 1000);
+    }
+
+    function syncOrderStatusFromStorage() {
+      const currentOrderId = localStorage.getItem('currentOrderId');
+      if (!currentOrderId) return;
+
+      const orders = JSON.parse(localStorage.getItem('hajis_orders') || localStorage.getItem('hajis_restaurant_orders') || '[]');
+      const order = orders.find(o => o.id == currentOrderId);
+      if (!order) {
+        console.warn('Order not found in sync:', currentOrderId);
+        return;
+      }
+
+      if (order.status === 'cancelled') {
+        setOrderCancelledUI();
+        console.log('Sync Ready: order cancelled');
+        return;
+      }
+
+      if (order.status === 'accepted') {
+        setOrderAcceptedUI(order);
+        console.log('Sync Ready: order accepted');
+        return;
+      }
+
+      if (order.status === 'completed') {
+        clearOrderTimer();
+        stopStatusPolling();
+        document.getElementById('order-status-panel').style.display = 'none';
+        document.getElementById('order-success').style.display = 'none';
+        document.getElementById('order-cancelled').style.display = 'none';
+        document.getElementById('order-delivered').style.display = 'block';
+        console.log('Sync Ready: order completed');
+        return;
+      }
+
+      if (order.status === 'overdue') {
+        clearOrderTimer();
+        document.getElementById('order-status-panel').style.display = 'none';
+        document.getElementById('order-success').style.display = 'block';
+        document.getElementById('order-cancelled').style.display = 'none';
+        document.getElementById('order-delivered').style.display = 'none';
+        document.querySelector('#order-success h2').textContent = 'Order is Late — We are working on delivery';
+        console.log('Sync Ready: order overdue');
+        return;
+      }
+
+      console.log('Sync Ready');
+    }
+
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'hajis_orders' || event.key === 'hajis_restaurant_orders' || event.key === 'hajis_orders_ts' || event.key === 'hajis_restaurant_orders_ts') {
+        console.log('Order storage event detected, syncing status...');
+        syncOrderStatusFromStorage();
+      }
+    });
+
+    function submitReview(rating, comment) {
+      const reviews = JSON.parse(localStorage.getItem('customerReviews') || '[]');
+      reviews.push({
+        rating: rating,
+        comment: comment,
+        timestamp: new Date().toISOString(),
+        orderId: localStorage.getItem('currentOrderId')
+      });
+      localStorage.setItem('customerReviews', JSON.stringify(reviews));
+      console.log('Review submitted:', { rating, comment });
+    }
+
+    let statusCheckInterval = null;
+
+    function startStatusPolling() {
+      if (statusCheckInterval) clearInterval(statusCheckInterval);
+      statusCheckInterval = setInterval(() => {
+        console.log('Polling for order status...');
+        checkOrderStatus();
+      }, 1000);
+    }
+
+    function stopStatusPolling() {
+      if (statusCheckInterval) clearInterval(statusCheckInterval);
+      statusCheckInterval = null;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('Order page loaded, initializing...');
+      loadCart();
+      setupRatingStars();
+      checkOrderStatus();
+      startStatusPolling();
+    });
+
+    function setupRatingStars() {
+      const stars = document.querySelectorAll('#rating-stars .star');
+      let selectedRating = 0;
+
+      stars.forEach(star => {
+        star.addEventListener('click', () => {
+          selectedRating = parseInt(star.dataset.value);
+          // Update all stars
+          stars.forEach((s, index) => {
+            if (index < selectedRating) {
+              s.classList.add('active');
+              s.style.color = '#22c55e';
+            } else {
+              s.classList.remove('active');
+              s.style.color = '#888';
+            }
+          });
+          document.getElementById('rating-display').textContent = `${selectedRating}/5 stars`;
+          // Store rating globally so it can be used in submission
+          window.selectedRating = selectedRating;
+        });
+
+        // Hover effect
+        star.addEventListener('mouseover', () => {
+          stars.forEach((s, index) => {
+            if (index < parseInt(star.dataset.value)) {
+              s.style.opacity = '0.8';
+            } else {
+              s.style.opacity = '0.4';
+            }
+          });
+        });
+      });
+
+      // Reset hover
+      document.getElementById('rating-stars').addEventListener('mouseleave', () => {
+        stars.forEach(s => {
+          s.style.opacity = '1';
+        });
+      });
+    }
+
+    function handleReviewSubmit() {
+      const rating = window.selectedRating || 0;
+      const comment = document.getElementById('review-comment').value.trim();
+
+      if (rating === 0) {
+        alert('Please select a rating!');
+        return;
+      }
+
+      if (comment === '') {
+        alert('Please add a comment!');
+        return;
+      }
+
+      // Submit the review
+      submitReview(rating, comment);
+
+      // Show confirmation message
+      const confirmMsg = document.getElementById('review-confirmation');
+      confirmMsg.style.display = 'block';
+
+      // Disable submit button
+      const submitBtn = document.getElementById('review-submit');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.5';
+        submitBtn.textContent = 'Review Submitted ✓';
+      }
+
+      // Hide form elements after 2 seconds
+      setTimeout(() => {
+        document.getElementById('rating-stars').style.opacity = '0.5';
+        document.getElementById('rating-stars').style.pointerEvents = 'none';
+        document.getElementById('review-comment').style.opacity = '0.5';
+        document.getElementById('review-comment').disabled = true;
+      }, 2000);
+    }
+  </script>
 </head>
 <body>
 <nav class="navbar"><div class="container"><a href="index.html" class="nav-brand"><span class="red">HAJI'S</span><span class="sub">PAKISTANI & INDIAN FUSION</span></a><ul class="nav-links"><li><a href="index.html">Home</a></li><li><a href="menu.html">Menu</a></li><li><a href="order.html" class="active">Order Online</a></li><li><a href="gallery.html">Gallery</a></li><li><a href="catering.html">Catering</a></li><li><a href="reviews.html">Reviews</a></li><li><a href="about.html">About</a></li><li><a href="contact.html">Contact</a></li></ul><button class="nav-toggle" onclick="document.getElementById('mob-menu').classList.toggle('open')">☰</button></div><div id="mob-menu" class="nav-mobile"><a href="index.html">Home</a><a href="menu.html">Menu</a><a href="order.html">Order Online</a><a href="gallery.html">Gallery</a><a href="catering.html">Catering</a><a href="reviews.html">Reviews</a><a href="about.html">About</a><a href="contact.html">Contact</a></div></nav>
@@ -55,7 +473,8 @@
     </div>
 
     <div style="max-width:600px;margin:48px auto 0">
-      <h3 style="font-size:1.5rem;font-weight:700;margin-bottom:24px">Delivery Details</h3>
+      <h3 id="form-heading" style="font-size:1.5rem;font-weight:700;margin-bottom:24px">Delivery Details</h3>
+      <h3 id="processing-heading" style="font-size:1.5rem;font-weight:700;margin-bottom:24px;display:none;color:var(--gold)">Order in Process...</h3>
       <div class="form-card" id="order-form">
         <input id="customer-name" class="form-input" type="text" placeholder="Full Name" required>
         <input id="customer-phone" class="form-input" type="tel" placeholder="Phone Number" required>
@@ -78,7 +497,7 @@
         <button class="btn-submit" type="button" onclick="processOrder()">Place Order</button>
         <div id="order-status-panel" style="display:none; margin-top:16px; text-align:center;">
           <div class="status-spinner" id="status-spinner"></div>
-          <p id="order-status-text" style="color: var(--gold); font-weight:600; margin-top:10px;">Order Sent! Waiting for Haji's Restaurant to accept...</p>
+          <p id="order-status-text" style="color: var(--gold); font-weight:600; margin-top:10px;">Please wait while we confirm your order...</p>
         </div>
       </div>
     </div>
@@ -88,19 +507,195 @@
 <section class="section" id="order-success" style="display:none;">
   <div class="container" style="max-width:600px;">
     <div class="order-success-card">
-      <div class="success-icon">✔</div>
-      <h2>Order Accepted!</h2>
-      <p>Delivery in progress.</p>
+      <div class="success-icon">✅</div>
+      <h2>Yum! Your Order is Confirmed! 🍛</h2>
+      <p>Our chefs at Haji's Restaurant are preparing your delicious meal with love. It will reach you soon!</p>
+      <div class="cooking-animation">👨‍🍳</div>
       <div class="tracker">
+        <span>Estimated Delivery:</span>
         <strong id="order-success-timer">60:00</strong>
       </div>
-      <p class="tracker-sub">Please keep this page open for real-time tracking.</p>
+      <p class="tracker-sub">Keep this page open to track your order in real-time.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="order-cancelled" style="display:none;">
+  <div class="container" style="max-width:600px;">
+    <div class="order-cancelled-card">
+      <div class="cancel-icon">✕</div>
+      <h2>Order Cancelled</h2>
+      <p>Sorry, your order was cancelled by the restaurant.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="order-delivered" style="display:none;">
+  <div class="container" style="max-width:600px;">
+    <div class="order-delivered-card">
+      <div class="delivered-icon">🎉</div>
+      <h2>Order Delivered! Hope you enjoy your meal! 😋</h2>
+      <p>We'd love to hear your thoughts about your experience!</p>
+      
+      <div style="margin: 24px 0;">
+        <p style="margin-bottom: 12px; font-weight: 600; color: #a0a0a0;">Rate your experience:</p>
+        <div class="rating-stars" id="rating-stars">
+          <span class="star" data-value="1">⭐</span>
+          <span class="star" data-value="2">⭐</span>
+          <span class="star" data-value="3">⭐</span>
+          <span class="star" data-value="4">⭐</span>
+          <span class="star" data-value="5">⭐</span>
+        </div>
+        <p id="rating-display" style="text-align: center; color: var(--gold); margin-top: 8px; font-weight: 600; min-height: 20px;"></p>
+      </div>
+
+      <div style="margin: 16px 0;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #a0a0a0;">Any comments?</label>
+        <textarea id="review-comment" class="form-input" rows="4" placeholder="Tell us about your meal, delivery, and service..."></textarea>
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-top: 20px;">
+        <button id="review-submit" class="btn-submit" style="flex: 1;" onclick="handleReviewSubmit()">Submit Review</button>
+        <a href="index.html" class="btn-primary" style="flex: 1; text-align: center; display: flex; align-items: center; justify-content: center; text-decoration: none;">Back to Home</a>
+      </div>
+
+      <p id="review-confirmation" style="color: #22c55e; text-align: center; margin-top: 12px; display: none; font-weight: 600;">✅ Thank you for your review!</p>
     </div>
   </div>
 </section>
 </div>
 
-<footer class="footer"><div class="container"><div class="footer-grid"><div><p style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:12px"><span class="red">HAJI'S</span> <span class="gold">RESTAURANT</span></p><p style="color:var(--muted-fg);font-size:0.875rem">Pakistani and Indian Fusion Kitchen.</p></div><div><h4>Quick Links</h4><a href="menu.html">Menu</a><a href="order.html">Order Online</a><a href="gallery.html">Gallery</a><a href="catering.html">Catering</a></div><div><h4>Connect</h4><a href="about.html">About Us</a><a href="reviews.html">Reviews</a><a href="contact.html">Contact</a></div></div><div class="footer-bottom">© 2026 Haji's Restaurant. All rights reserved.</div></div></footer>
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <p style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:12px"><span class="red">HAJI'S</span> <span class="gold">RESTAURANT</span></p>
+        <p style="color:var(--muted-fg);font-size:0.875rem">Pakistani and Indian Fusion Kitchen — Crafted with passion, served with love.</p>
+        <div class="footer-links">
+          <a href="#">Terms & Policies</a>
+          <a href="#">Accessibility Statement</a>
+        </div>
+      </div>
+      <div class="footer-contact">
+        <h4>Contact Info</h4>
+        <p><span class="icon">📞</span> (650) 507-3959</p>
+        <p><span class="icon">✉️</span> Hajisstaff@gmail.com</p>
+      </div>
+      <div>
+        <h4>Newsletter</h4>
+        <div class="newsletter-signup">
+          <input type="email" placeholder="Enter your email">
+          <button>Send</button>
+        </div>
+      </div>
+      <div class="footer-locations">
+        <h4>Locations</h4>
+        <ul>
+          <li>Hajis Restaurant Menlo Park</li>
+          <li>San Jose</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">© 2026 Haji's Restaurant. All rights reserved.</div>
+  </div>
+</footer>
 <a href="https://wa.me/923102041770" target="_blank" class="whatsapp-fab" aria-label="Chat on WhatsApp">📱</a>
+
+<!-- Floating Chat Button -->
+<button class="help-fab" onclick="openChat()">💬</button>
+
+<!-- Chat Popup -->
+<div id="help-popup" class="help-popup">
+  <div class="chat-header" style="background:#cc0000 !important;color:#fff !important;">
+    <h3 style="color:#fff !important;">Haji's Support Bot</h3>
+    <button class="chat-close" onclick="closeChat()">×</button>
+  </div>
+  <div class="chat-messages" id="chat-messages">
+    <div class="message bot">Hello! Welcome to Haji's Support.</div>
+  </div>
+  <div class="chat-input-area">
+    <textarea id="chat-input" placeholder="Type your message..." rows="3"></textarea>
+    <button id="hajiSendBtn" style="background:#cc0000 !important;color:#fff !important;border:1px solid #cc0000 !important;" onclick="sendMessage()">Send to Haji's</button>
+  </div>
+</div>
+
+<script>
+let chatInterval = null;
+
+function openChat() {
+  document.getElementById('help-popup').style.display = 'flex';
+  loadCustomerChat();
+  chatInterval = setInterval(loadCustomerChat, 2000);
+}
+
+function closeChat() {
+  document.getElementById('help-popup').style.display = 'none';
+  if (chatInterval) {
+    clearInterval(chatInterval);
+    chatInterval = null;
+  }
+}
+
+function loadCustomerChat() {
+  const messages = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+  const chatMessages = document.getElementById('chat-messages');
+  // Keep the welcome message
+  const welcome = chatMessages.querySelector('.message.bot');
+  chatMessages.innerHTML = '';
+  if (welcome) chatMessages.appendChild(welcome.cloneNode(true));
+  // Add all customer messages and admin replies
+  messages.filter(m => m.name === 'Chat User').forEach(m => {
+    addMessage(m.message, 'user');
+    if (m.replies) {
+      m.replies.forEach(r => {
+        addMessage(r.message, 'bot');
+      });
+    }
+  });
+  // Scroll to bottom
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const message = input.value.trim();
+  if (!message) return;
+
+  // Add user message to chat
+  addMessage(message, 'user');
+  input.value = '';
+
+  // Save to localStorage immediately
+  const helpRequests = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+  helpRequests.push({
+    name: 'Chat User',
+    phone: 'Chat Support',
+    message: message,
+    timestamp: new Date().toISOString(),
+    read: false,
+    replies: []
+  });
+  localStorage.setItem('hajis_customer_help', JSON.stringify(helpRequests));
+  // Dispatch storage event for real-time updates
+  window.dispatchEvent(new StorageEvent('storage', { key: 'hajis_customer_help' }));
+  // Update chat immediately
+  loadCustomerChat();
+
+  // Show auto-reply message after 2 seconds
+  setTimeout(() => {
+    addMessage('Your message has been forwarded to our management.', 'bot');
+  }, 2000);
+}
+
+function addMessage(text, type) {
+  const messagesDiv = document.getElementById('chat-messages');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `message ${type}`;
+  messageDiv.textContent = text;
+  messagesDiv.appendChild(messageDiv);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+</script>
+
 </body>
 </html>

@@ -127,6 +127,9 @@ function getRestaurantMenu() {
 }
 
 function setRestaurantMenu(menu) {
+  if (!Array.isArray(menu)) return;
+  hajisMenuCache = menu;
+  hajisMenuLoadedFromStorage = true;
   localStorage.setItem('restaurantMenu', JSON.stringify(menu));
   // Trigger storage event across tabs/instances for immediate client menu refresh
   localStorage.setItem('hajis_menu_items', JSON.stringify({ ts: Date.now() }));
@@ -134,7 +137,7 @@ function setRestaurantMenu(menu) {
 }
 
 function setActiveSection(sectionKey) {
-  const sections = ['orders', 'menu', 'add', 'security'];
+  const sections = ['orders', 'completed', 'menu', 'add', 'feedback', 'help', 'security'];
   sections.forEach((key) => {
     const section = document.getElementById(`${key}-section`);
     const navBtn = document.getElementById(`nav-${key}`);
@@ -143,10 +146,147 @@ function setActiveSection(sectionKey) {
   });
 }
 
+let helpRefreshTimer = null;
+
+function startHelpAutoRefresh() {
+  stopHelpAutoRefresh();
+  helpRefreshTimer = setInterval(renderHelpMessages, 2000);
+}
+
+function stopHelpAutoRefresh() {
+  if (helpRefreshTimer) {
+    clearInterval(helpRefreshTimer);
+    helpRefreshTimer = null;
+  }
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function updateHelpBadge() {
+  const helpRequests = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+  const unread = helpRequests.some(req => !req.read);
+  const badge = document.getElementById('help-badge');
+  if (badge) {
+    badge.style.display = unread ? 'inline' : 'none';
+  }
+}
+
+function displayHelpRequests() {
+  const container = document.getElementById('help-messages-container');
+  if (!container) {
+    console.warn('Help messages container not found');
+    return;
+  }
+  container.innerHTML = '';
+
+  const helpRequests = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+  if (!Array.isArray(helpRequests) || helpRequests.length === 0) {
+    container.innerHTML = '<p style="color: var(--muted);">No help requests yet.</p>';
+    updateHelpBadge();
+    return;
+  }
+
+  helpRequests.forEach((req, index) => {
+    const card = document.createElement('div');
+    card.className = 'item-box';
+    card.style = 'background:#fff;color:#000;border:1px solid #ddd;margin-bottom:10px;padding:12px;border-radius:8px;';
+
+    const msg = document.createElement('p');
+    msg.innerHTML = `<strong>Message:</strong> ${escapeHtml(req.message || '')}`;
+
+    const phone = document.createElement('p');
+    phone.innerHTML = `<strong>Phone:</strong> ${escapeHtml(req.phone || 'N/A')}`;
+
+    const button = document.createElement('button');
+    button.textContent = 'Mark as Resolved';
+    button.style = 'background:#cc0000;color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;margin-top:8px;';
+    button.addEventListener('click', () => {
+      helpRequests.splice(index, 1);
+      localStorage.setItem('hajis_customer_help', JSON.stringify(helpRequests));
+      displayHelpRequests();
+      updateHelpBadge();
+    });
+
+    card.appendChild(msg);
+    card.appendChild(phone);
+    card.appendChild(button);
+    container.appendChild(card);
+  });
+
+  updateHelpBadge();
+}
+
+function renderHelpMessages() {
+  const container = document.getElementById('help-messages-container');
+  if (!container) {
+    console.warn('Help messages container not found');
+    return;
+  }
+  container.innerHTML = '';
+
+  const helpRequests = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+  if (!Array.isArray(helpRequests) || helpRequests.length === 0) {
+    container.innerHTML = '<p style="color: var(--muted);">No help requests yet.</p>';
+    updateHelpBadge();
+    return;
+  }
+
+  helpRequests.forEach((req, index) => {
+    const card = document.createElement('div');
+    card.className = 'item-box';
+    card.style = 'background:#fff;color:#000;border:1px solid #ddd;margin-bottom:10px;padding:12px;border-radius:8px;';
+
+    const msg = document.createElement('p');
+    msg.innerHTML = `<strong>Message:</strong> ${escapeHtml(req.message || '')}`;
+
+    const phone = document.createElement('p');
+    phone.innerHTML = `<strong>Phone:</strong> ${escapeHtml(req.phone || 'N/A')}`;
+
+    const button = document.createElement('button');
+    button.textContent = 'Mark as Resolved';
+    button.style = 'background:#cc0000;color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;margin-top:8px;';
+    button.addEventListener('click', () => {
+      helpRequests.splice(index, 1);
+      localStorage.setItem('hajis_customer_help', JSON.stringify(helpRequests));
+      renderHelpMessages();
+      updateHelpBadge();
+    });
+
+    card.appendChild(msg);
+    card.appendChild(phone);
+    card.appendChild(button);
+    container.appendChild(card);
+  });
+
+  updateHelpBadge();
+}
+
 function switchTab(tab) {
   setActiveSection(tab);
-  if (tab === 'orders') loadOrders();
+  if (tab === 'orders') {
+    loadOrders();
+    startAdminOrdersPolling();
+  } else {
+    stopAdminOrdersPolling();
+  }
+  if (tab === 'completed') {
+    loadCompletedOrders();
+  }
   if (tab === 'menu') displayMenuManager();
+  if (tab === 'feedback') loadCustomerFeedback();
+  if (tab === 'help') {
+    renderHelpMessages();
+    startHelpAutoRefresh();
+  } else {
+    stopHelpAutoRefresh();
+  }
 }
 
 function loginAdmin() {
@@ -176,56 +316,416 @@ function logoutAdmin() {
   document.getElementById('admin-error').style.display = 'none';
 }
 
+const ORDERS_KEY = 'hajis_orders';
+
 function getOrders() {
-  return JSON.parse(localStorage.getItem('hajis_orders') || '[]');
+  try {
+    const raw = localStorage.getItem(ORDERS_KEY) || localStorage.getItem('hajis_restaurant_orders') || '[]';
+    return JSON.parse(raw);
+  } catch (e) {
+    console.warn('Error parsing orders:', e);
+    return [];
+  }
 }
 
 function setOrders(orders) {
-  localStorage.setItem('hajis_orders', JSON.stringify(orders));
+  const payload = JSON.stringify(orders);
+  localStorage.setItem(ORDERS_KEY, payload);
+  localStorage.setItem('hajis_restaurant_orders', payload);
+  localStorage.setItem(ORDERS_KEY + '_ts', Date.now().toString());
+  localStorage.setItem('hajis_restaurant_orders_ts', Date.now().toString());
+  // NO loadOrders() and NO storage event dispatch here to avoid call stack recursion.
+}
+function getOrderRemainingSeconds(order) {
+  if (!order || !order.deliveryMinutes || !order.acceptedAt) return null;
+  const acceptedAt = new Date(order.acceptedAt).getTime();
+  if (!acceptedAt) return null;
+  const elapsedSec = Math.floor((Date.now() - acceptedAt) / 1000);
+  return Math.max(-999999, Math.round(order.deliveryMinutes * 60 - elapsedSec));
 }
 
 function loadOrders() {
-  const orders = getOrders();
-  const ordersList = document.getElementById('orders-list');
+  let orders = getOrders();
+  const ordersList = document.getElementById('orders-feed');
   if (!ordersList) return;
 
-  if (orders.length === 0) {
-    ordersList.innerHTML = '<p style="color:#ccc;">No orders yet.</p>';
+  if (!Array.isArray(orders) || orders.length === 0) {
+    ordersList.innerHTML = '<p style="color:#ccc;">No active orders.</p>';
     return;
   }
 
+  // Normalize orders array and ensure newest first (reverse handling)
+  orders = orders.filter(o => o && o.timestamp);
+  orders.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  orders = orders.reverse(); // latest at top
+
+  // Show active orders first: pending/accepted/overdue, and then cancelled as fallback
+  const activeOrders = orders.filter(o => !['cancelled', 'completed'].includes((o.status || '').toLowerCase()));
+  const cancelledOrders = orders.filter(o => (o.status || '').toLowerCase() === 'cancelled');
+  const orderedToRender = activeOrders.concat(cancelledOrders);
+
+  let hasOverdue = false;
   ordersList.innerHTML = '';
-  orders.slice().reverse().forEach((order) => {
-    const item = document.createElement('div');
-    item.className = 'item-box';
+
+  orderedToRender.forEach((order) => {
+    try {
+      const item = document.createElement('div');
+      item.className = 'item-box';
+      item.style.position = 'relative';
+
+      const rawStatus = (order.status || 'pending').toString().trim().toLowerCase();
+      let normalizedStatus = rawStatus;
+      if (rawStatus === 'in process' || rawStatus === 'in_process' || rawStatus === 'processing') {
+        normalizedStatus = 'pending';
+      }
+      let statusDisplay = normalizedStatus;
+      let extraInfo = '';
+
+      if (order.status === 'accepted') {
+      const remainingSec = getOrderRemainingSeconds(order);
+      if (remainingSec !== null) {
+        const m = Math.max(0, Math.floor(remainingSec / 60));
+        const s = Math.max(0, remainingSec % 60);
+        if (remainingSec >= 0) {
+          extraInfo = `<span style="color:#22c55e; font-weight:600;">Remaining: ${m}:${s.toString().padStart(2, '0')}</span>`;
+        } else {
+          const overdue = Math.abs(remainingSec);
+          const overdueMinutes = Math.floor(overdue / 60);
+          const overdueSeconds = overdue % 60;
+          extraInfo = `<span style="color:#ff6b6b; font-weight:700;">Overdue by ${overdueMinutes}:${overdueSeconds.toString().padStart(2, '0')}</span>`;
+          statusDisplay = 'overdue';
+          hasOverdue = true;
+          if (!order.lateAlerted) {
+            order.lateAlerted = true;
+            playOrderLateAlert(order.id);
+          }
+        }
+      }
+    }
+
+    let actions = '';
+    if (normalizedStatus === 'pending') {
+      actions = '<button class="btn btn-accept" onclick="window.updateStatus(\'' + order.id + '\', \'accepted\')">Accept</button><button class="btn btn-cancel" onclick="window.updateStatus(\'' + order.id + '\', \'cancelled\')">Cancel</button>';
+    } else if (normalizedStatus === 'accepted') {
+      actions = '<div class="flex-row" style="align-items:center; gap:8px; flex-wrap:wrap;"><input id="timer-update-' + order.id + '" type="number" class="timer-adjust-input" placeholder="±min" style="width:80px;" /><button class="btn btn-secondary btn-tiny" onclick="adjustOrderDeliveryMinutes(\'' + order.id + '\')">Update Timer</button><button class="btn btn-tiny" onclick="markOrderDelivered(\'' + order.id + '\')">Mark Delivered</button><button class="btn btn-cancel btn-tiny" onclick="window.updateStatus(\'' + order.id + '\', \'cancelled\')" style="background:#c31d1d;border-color:#ff6161;color:#fff;">Cancel</button></div>';
+    } else if (normalizedStatus === 'overdue') {
+      actions = '<button class="btn btn-tiny" onclick="markOrderDelivered(\'' + order.id + '\')">Mark Delivered</button>';
+    } else if (normalizedStatus === 'completed') {
+      actions = '<span style="color:#9af7a2; font-weight:600;">Completed</span>';
+    } else if (normalizedStatus === 'cancelled') {
+      actions = '<span style="color:#ff9b9b; font-weight:600;">Cancelled</span>';
+    }
+
+    const statusClass = normalizedStatus === 'accepted' ? 'order-on-time' : '';
+    if (statusClass) {
+      item.classList.add(statusClass);
+    }
+    if (order.status === 'accepted' && getOrderRemainingSeconds(order) !== null && getOrderRemainingSeconds(order) < 0) {
+      item.classList.add('order-late');
+    }
+
     item.innerHTML = `
-      <div><strong>${order.name}</strong> - <span style="color:#999;">${order.status || 'pending'}</span></div>
+      <button class="btn btn-tiny" onclick="deleteOrder('${order.id}')" style="position:absolute; top:5px; right:5px; background:#ff4444; color:#fff; border:none; border-radius:50%; width:25px; height:25px; cursor:pointer; font-size:14px;">X</button>
+      <div class="item-box-title"><strong>${order.name}</strong> - <span style="color:#999;">${statusDisplay}</span></div>
+      <div style="margin:4px 0;">${extraInfo}</div>
       <div class="order-actions" style="margin-top:8px;">
-        <button class="btn" onclick="acceptOrder(${order.id})">Accept</button>
-        <button class="btn" onclick="cancelOrder(${order.id})">Cancel</button>
+        ${actions}
       </div>
     `;
     ordersList.appendChild(item);
+    } catch (error) {
+      console.error('loadOrders: failed to render order', order && order.id, error);
+    }
+  });
+
+  if (hasOverdue) {
+    triggerAdminLateNotification();
+  }
+
+  // Persist any auto-late flags (to avoid repeat audio per refresh)
+  setOrders(orders);
+}
+
+function loadCompletedOrders() {
+  let orders = getOrders();
+  const completedList = document.getElementById('completed-orders-list');
+  if (!completedList) return;
+
+  if (!Array.isArray(orders) || orders.length === 0) {
+    completedList.innerHTML = '<p style="color:#ccc;">No completed orders.</p>';
+    return;
+  }
+
+  // Filter for completed orders
+  orders = orders.filter(o => o && o.timestamp && (o.status || '').toLowerCase() === 'completed');
+  orders.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  orders = orders.reverse(); // latest at top
+
+  completedList.innerHTML = '';
+
+  orders.forEach((order) => {
+    try {
+      const item = document.createElement('div');
+      item.className = 'item-box';
+      item.style.position = 'relative';
+
+      const rawStatus = (order.status || 'completed').toString().trim().toLowerCase();
+      let statusDisplay = 'Completed';
+      let extraInfo = '';
+
+      if (order.deliveredAt) {
+        extraInfo = `<span style="color:#22c55e; font-weight:600;">Delivered at ${new Date(order.deliveredAt).toLocaleString()}</span>`;
+      }
+
+      item.innerHTML = `
+        <button class="btn btn-tiny" onclick="deleteOrder('${order.id}')" style="position:absolute; top:5px; right:5px; background:#ff4444; color:#fff; border:none; border-radius:50%; width:25px; height:25px; cursor:pointer; font-size:14px;">X</button>
+        <div class="item-box-title"><strong>${order.name}</strong> - <span style="color:#999;">${statusDisplay}</span></div>
+        <div style="margin:4px 0;">${extraInfo}</div>
+      `;
+      completedList.appendChild(item);
+    } catch (error) {
+      console.error('loadCompletedOrders: failed to render order', order && order.id, error);
+    }
+  });
+}
+
+function markOrderDelivered(orderId) {
+  const orders = getOrders();
+  const idx = orders.findIndex((o) => o.id === orderId);
+  if (idx === -1) return;
+  orders[idx].status = 'completed';
+  orders[idx].deliveredAt = new Date().toISOString();
+  orders[idx].lateAlerted = false;
+  setOrders(orders);
+  loadOrders();
+  window.dispatchEvent(new StorageEvent('storage', { key: 'hajis_orders' }));
+}
+
+function playOrderLateAlert(orderId) {
+  const soundId = 'late-alert-sound';
+  const existing = document.getElementById(soundId);
+  if (existing) {
+    existing.play().catch(() => {});
+  }
+
+  if (Notification.permission === 'granted') {
+    new Notification(`Order #${orderId} is Late! Please check status.`);
+  } else if (Notification.permission !== 'denied') {
+    Notification.requestPermission().then((permission) => {
+      if (permission === 'granted') {
+        new Notification(`Order #${orderId} is Late! Please check status.`);
+      }
+    });
+  }
+}
+
+function triggerAdminLateNotification() {
+  const audioId = 'late-alert-sound';
+  let sound = document.getElementById(audioId);
+  if (!sound) {
+    sound = document.createElement('audio');
+    sound.id = audioId;
+    sound.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YRAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg';
+    sound.style.display = 'none';
+    document.body.appendChild(sound);
+  }
+  sound.play().catch(() => {});
+}
+
+function adminTick() {
+  const orders = getOrders();
+  let updated = false;
+  orders.forEach((order) => {
+    if (order.status === 'accepted') {
+      const remaining = getOrderRemainingSeconds(order);
+      if (remaining !== null && remaining < 0) {
+        order.status = 'overdue';
+        updated = true;
+      }
+    }
+  });
+  if (updated) {
+    setOrders(orders);
+  }
+  loadOrders();
+}
+
+setInterval(adminTick, 5000);
+
+let adminOrdersRefreshInterval = null;
+
+function startAdminOrdersPolling() {
+  if (adminOrdersRefreshInterval) clearInterval(adminOrdersRefreshInterval);
+  adminOrdersRefreshInterval = setInterval(() => {
+    loadOrders();
+  }, 2000); // 2-second admin polling to keep feed updated quickly
+}
+
+function stopAdminOrdersPolling() {
+  if (adminOrdersRefreshInterval) clearInterval(adminOrdersRefreshInterval);
+  adminOrdersRefreshInterval = null;
+}
+
+function clearAllHistory() {
+  localStorage.removeItem(ORDERS_KEY);
+  localStorage.removeItem('hajis_restaurant_orders');
+  localStorage.removeItem(ORDERS_KEY + '_ts');
+  localStorage.removeItem('hajis_restaurant_orders_ts');
+  localStorage.removeItem('currentOrderId');
+  console.info('All orders history cleared.');
+  loadOrders();
+  updateHelpBadge();
+  renderHelpMessages();
+}
+
+window.addEventListener('storage', (event) => {
+  // Keep customer help sync, but avoid order re-trigger loops;
+  // order feed now uses interval polling.
+  if (event.key === 'hajis_customer_help') {
+    updateHelpBadge();
+    if (document.getElementById('help-section')?.classList.contains('active')) {
+      displayHelpRequests();
+    }
+  }
+});
+
+window.addEventListener('load', () => {
+  if (document.getElementById('orders-section')) {
+    startAdminOrdersPolling();
+  }
+});
+
+
+function loadCustomerFeedback() {
+  const reviews = JSON.parse(localStorage.getItem('customerReviews') || '[]');
+  const feedbackList = document.getElementById('feedback-list');
+  if (!feedbackList) return;
+
+  if (!Array.isArray(reviews) || reviews.length === 0) {
+    feedbackList.innerHTML = '<p style="color:#ccc;">No feedback available yet.</p>';
+    return;
+  }
+
+  feedbackList.innerHTML = '';
+  reviews.slice().reverse().forEach((review, index) => {
+    const item = document.createElement('div');
+    item.className = 'item-box';
+    item.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
+        <strong style="color:#fff;">Feedback #${reviews.length - index}</strong>
+        <span style="color:#22c55e; font-weight:700;">${review.rating || 0}/5</span>
+      </div>
+      <div style="color:#ffd700; margin-bottom:6px;">${'★'.repeat(review.rating || 0)}${'☆'.repeat(5 - (review.rating || 0))}</div>
+      <div style="color:#d0d0d0; white-space:pre-wrap;">${review.comment || '<i>No comment</i>'}</div>
+      <div style="margin-top:8px; font-size:0.8rem; color:#888;">${new Date(review.timestamp || Date.now()).toLocaleString()}</div>
+    `;
+    feedbackList.appendChild(item);
   });
 }
 
 function acceptOrder(orderId) {
+  const minutes = prompt('Enter delivery time in minutes (e.g., 30, 45, 60):');
+  const mins = parseInt(minutes, 10);
+  if (!mins || mins < 1 || mins > 240) {
+    alert('Please enter a valid number of minutes (1-240).');
+    return;
+  }
   const orders = getOrders();
   const idx = orders.findIndex((o) => o.id === orderId);
   if (idx === -1) return;
   orders[idx].status = 'accepted';
+  orders[idx].deliveryMinutes = mins;
+  orders[idx].acceptedAt = new Date().toISOString();
   setOrders(orders);
-  startMenuTimer();
   loadOrders();
 }
 
-function cancelOrder(orderId) {
+function adjustOrderDeliveryMinutes(orderId) {
+  const deltaInput = document.getElementById(`timer-update-${orderId}`);
+  if (!deltaInput) return;
+  const delta = parseInt(deltaInput.value, 10);
+  if (!Number.isFinite(delta) || delta === 0) {
+    alert('Enter minutes to add or subtract (e.g., 5 or -5).');
+    return;
+  }
   const orders = getOrders();
   const idx = orders.findIndex((o) => o.id === orderId);
   if (idx === -1) return;
-  orders[idx].status = 'cancelled';
+  if (orders[idx].status !== 'accepted') {
+    alert('Can only adjust timer for accepted orders.');
+    return;
+  }
+
+  const currentMinutes = Number(orders[idx].deliveryMinutes || 0);
+  const newMinutes = Math.max(1, currentMinutes + delta);
+  orders[idx].deliveryMinutes = newMinutes;
+  orders[idx].lastTimerUpdate = new Date().toISOString();
+
   setOrders(orders);
   loadOrders();
+  alert(`Order timer updated to ${newMinutes} min.`);
+  deltaInput.value = '';
+}
+
+function cancelOrder(orderId) {
+  window.updateStatus(`${orderId}`, 'cancelled');
+}
+
+window.updateStatus = function (id, newStatus) {
+  const orderId = `${id}`;
+  console.log('Status Updated:', orderId, newStatus);
+
+  const orders = JSON.parse(localStorage.getItem('hajis_orders') || '[]');
+  const idx = orders.findIndex((o) => `${o.id}` === orderId);
+  if (idx === -1) {
+    console.warn('updateStatus: order not found', orderId);
+    return;
+  }
+
+  if (newStatus === 'accepted') {
+    // Prompt for delivery time when accepting
+    const minutes = prompt('Enter delivery time in minutes (e.g., 30, 45, 60):');
+    const mins = parseInt(minutes, 10);
+    if (!mins || mins < 1 || mins > 240) {
+      alert('Please enter a valid number of minutes (1-240).');
+      return;
+    }
+    orders[idx].deliveryMinutes = mins;
+    orders[idx].acceptedAt = new Date().toISOString();
+  }
+
+  orders[idx].status = newStatus;
+  orders[idx].updatedAt = new Date().toISOString();
+
+  localStorage.setItem('hajis_orders', JSON.stringify(orders));
+  localStorage.setItem('hajis_restaurant_orders', JSON.stringify(orders));
+  localStorage.setItem('hajis_orders_ts', Date.now().toString());
+  localStorage.setItem('hajis_restaurant_orders_ts', Date.now().toString());
+
+  loadOrders();
+  window.dispatchEvent(new StorageEvent('storage', { key: 'hajis_orders' }));
+};
+
+function deleteOrder(id) {
+  const orderId = `${id}`;
+  console.log('Deleting order:', orderId);
+
+  const orders = JSON.parse(localStorage.getItem('hajis_orders') || '[]');
+  const idx = orders.findIndex((o) => `${o.id}` === orderId);
+  if (idx === -1) {
+    console.warn('deleteOrder: order not found', orderId);
+    return;
+  }
+
+  orders.splice(idx, 1);
+
+  localStorage.setItem('hajis_orders', JSON.stringify(orders));
+  localStorage.setItem('hajis_restaurant_orders', JSON.stringify(orders));
+  localStorage.setItem('hajis_orders_ts', Date.now().toString());
+  localStorage.setItem('hajis_restaurant_orders_ts', Date.now().toString());
+
+  loadOrders();
+  window.dispatchEvent(new StorageEvent('storage', { key: 'hajis_orders' }));
 }
 
 function displayMenuManager() {
@@ -244,11 +744,17 @@ function displayMenuManager() {
     row.className = 'item-box';
     row.innerHTML = `
       <div><strong>${item.name}</strong> - $${item.price.toFixed(2)}</div>
-      <div style="color:#b3b3b3;">${item.description || ''}</div>
-      <div class="dish-actions" style="margin-top:8px;">
-        <input id="price-${item.id}" type="number" min="0" step="0.01" value="${item.price.toFixed(2)}" style="width:90px;" />
-        <button class="btn" onclick="updatePrice(${item.id})">Update Price</button>
-        <button class="btn" onclick="deleteDish(${item.id})">Delete</button>
+      <div style="color:#b3b3b3; margin-bottom: 8px;">${item.description || ''}</div>
+      <div class="dish-actions" style="margin-top:8px; display: grid; gap: 8px;">
+        <label>Image URL: <input id="image-${item.id}" type="text" value="${item.image || ''}" style="width:100%;" /></label>
+        <label>Description:
+          <textarea id="desc-${item.id}" rows="2" style="width:100%;">${item.description || ''}</textarea>
+        </label>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+          <input id="price-${item.id}" type="number" min="0" step="0.01" value="${item.price.toFixed(2)}" style="width:120px;" />
+          <button class="btn btn-primary" onclick="updateMenuItem(${item.id})">Save All Changes</button>
+          <button class="btn btn-cancel" onclick="deleteDish(${item.id})">Delete</button>
+        </div>
       </div>
     `;
     manager.appendChild(row);
@@ -269,6 +775,37 @@ function updatePrice(itemId) {
   setRestaurantMenu(menu);
   displayMenuManager();
 }
+
+function updateMenuItem(itemId) {
+  const priceInput = document.getElementById(`price-${itemId}`);
+  const imageInput = document.getElementById(`image-${itemId}`);
+  const descInput = document.getElementById(`desc-${itemId}`);
+
+  if (!priceInput || !imageInput || !descInput) return;
+
+  const price = parseFloat(priceInput.value);
+  if (isNaN(price) || price < 0) {
+    alert('Please enter a valid price.');
+    return;
+  }
+
+  const menu = getRestaurantMenu();
+  const found = menu.find((m) => m.id === itemId);
+  if (!found) return;
+
+  let image = imageInput.value.trim();
+  if (image && !image.toLowerCase().startsWith('images/')) {
+    image = `images/${image}`;
+  }
+
+  found.price = price;
+  found.image = image || found.image || 'images/placeholder.jpg';
+  found.description = descInput.value.trim();
+
+  setRestaurantMenu(menu);
+  displayMenuManager();
+}
+
 
 function deleteDish(itemId) {
   let menu = getRestaurantMenu();
@@ -338,15 +875,12 @@ function initializeHajisMenu() {
   try {
     const stored = localStorage.getItem('restaurantMenu');
     if (!stored || stored === '[]') {
-      console.log('hajis: Initializing menu from initialMenu array...');
       const normalized = normalizeMenu(initialMenu);
       localStorage.setItem('restaurantMenu', JSON.stringify(normalized));
-      console.log('hajis: Menu initialized with', normalized.length, 'items');
       return normalized;
     }
     const parsed = JSON.parse(stored);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      console.log('hajis: Menu already in localStorage, items:', parsed.length);
       return parsed;
     }
   } catch (err) {
@@ -380,6 +914,75 @@ function resetMenu() {
 
 initializeHajisMenu();
 
+// Cart functions
+function getCart() {
+  try {
+    return JSON.parse(localStorage.getItem('cart') || '[]');
+  } catch (e) {
+    console.warn('Error parsing cart', e);
+    return [];
+  }
+}
+
+function setCart(cart) {
+  localStorage.setItem('cart', JSON.stringify(cart));
+  updateCartDisplay();
+}
+
+function addToCart(itemId) {
+  const menu = getRestaurantMenu();
+  const item = menu.find(i => i.id === itemId);
+  if (!item) {
+    alert('Item not found');
+    return;
+  }
+  const cart = getCart();
+  const existing = cart.find(c => c.id === itemId);
+  if (existing) {
+    existing.quantity = (existing.quantity || 1) + 1;
+  } else {
+    cart.push({ ...item, quantity: 1 });
+  }
+  setCart(cart);
+  alert(`${item.name} added to cart!`);
+}
+
+function removeFromCart(itemId) {
+  const cart = getCart().filter(c => c.id !== itemId);
+  setCart(cart);
+}
+
+function updateQuantity(itemId, quantity) {
+  const cart = getCart();
+  const item = cart.find(c => c.id === itemId);
+  if (item) {
+    item.quantity = Math.max(1, quantity);
+    setCart(cart);
+  }
+}
+
+function clearCart() {
+  setCart([]);
+}
+
+function checkout() {
+  window.location.href = 'order.html';
+}
+
+function updateCartDisplay() {
+  const cart = getCart();
+  const count = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+  const cartIcon = document.getElementById('cart-icon');
+  const cartCount = document.getElementById('cart-count');
+  if (cartCount) {
+    cartCount.textContent = count;
+    cartCount.style.display = count > 0 ? 'inline' : 'none';
+  }
+  if (cartIcon) {
+    cartIcon.style.display = count > 0 ? 'block' : 'none';
+  }
+}
+
 function startMenuTimer() {
   const value = Date.now();
   sessionStorage.setItem('menuTimerStart', value.toString());
@@ -400,3 +1003,119 @@ function checkAdminSession() {
 }
 
 window.addEventListener('DOMContentLoaded', checkAdminSession);
+
+// Cart functions
+function getCart() {
+  return JSON.parse(localStorage.getItem('hajis_cart') || '[]');
+}
+
+function setCart(cart) {
+  localStorage.setItem('hajis_cart', JSON.stringify(cart));
+  updateCartDisplay();
+}
+
+function addToCart(itemId) {
+  const menu = getRestaurantMenu();
+  const item = menu.find(i => i.id === itemId);
+  if (!item) return;
+
+  const cart = getCart();
+  const existing = cart.find(c => c.id === itemId);
+  if (existing) {
+    existing.quantity += 1;
+  } else {
+    cart.push({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      quantity: 1,
+      image: item.image || 'images/placeholder.jpg'
+    });
+  }
+  setCart(cart);
+  showCartToast(`${item.name} added to cart!`);
+}
+
+function removeFromCart(itemId) {
+  const cart = getCart().filter(c => c.id !== itemId);
+  setCart(cart);
+}
+
+function updateCartQuantity(itemId, quantity) {
+  const cart = getCart();
+  const item = cart.find(c => c.id === itemId);
+  if (item) {
+    item.quantity = Math.max(1, quantity);
+    setCart(cart);
+  }
+}
+
+function clearCart() {
+  setCart([]);
+}
+
+function getCartTotal() {
+  const cart = getCart();
+  return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+}
+
+function updateCartDisplay() {
+  const cart = getCart();
+  const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Update floating cart button
+  const cartBtn = document.querySelector('.floating-cart-btn');
+  const cartCount = document.querySelector('.floating-cart-count');
+  if (cartBtn && cartCount) {
+    cartCount.textContent = count;
+    cartBtn.style.display = count > 0 ? 'flex' : 'none';
+  }
+
+  // Update cart sidebar
+  const sidebar = document.querySelector('.floating-cart-sidebar');
+  const content = document.querySelector('.cart-panel-content');
+  if (sidebar && content) {
+    if (cart.length === 0) {
+      content.innerHTML = '<p class="empty-cart">Your cart is empty</p>';
+    } else {
+      let html = '<table class="cart-table"><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th><th></th></tr></thead><tbody>';
+      cart.forEach(item => {
+        const total = (item.price * item.quantity).toFixed(2);
+        html += `
+          <tr>
+            <td>${item.name}</td>
+            <td><input type="number" min="1" value="${item.quantity}" onchange="updateCartQuantity(${item.id}, this.value)"></td>
+            <td>$${item.price.toFixed(2)}</td>
+            <td>$${total}</td>
+            <td><button onclick="removeFromCart(${item.id})">×</button></td>
+          </tr>
+        `;
+      });
+      html += '</tbody></table>';
+      html += `<div class="cart-total-wrap"><strong>Total: $${getCartTotal().toFixed(2)}</strong></div>`;
+      html += '<a href="order.html" class="btn btn-primary" style="width:100%;margin-top:16px;">Checkout</a>';
+      content.innerHTML = html;
+    }
+  }
+}
+
+function toggleCartSidebar() {
+  const sidebar = document.querySelector('.floating-cart-sidebar');
+  if (sidebar) {
+    sidebar.classList.toggle('open');
+  }
+}
+
+function showCartToast(message) {
+  const toast = document.querySelector('.cart-toast');
+  if (toast) {
+    toast.textContent = message;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3000);
+  }
+}
+
+// Initialize cart display on page load
+document.addEventListener('DOMContentLoaded', () => {
+  updateCartDisplay();
+});

@@ -17,7 +17,20 @@
     .btn { border: 1px solid var(--accent); background: rgba(255,215,0,0.2); color: #101010; font-weight: 700; border-radius: 8px; padding: 10px 14px; cursor: pointer; }
     .btn-primary { background: var(--accent); color: #111; }
     .btn-secondary { background: #303030; color: #fff; }
-    .error { color: #ff6b6b; margin-top: 8px; display: none; }
+    .btn-tiny { font-size: 0.78rem; padding: 5px 9px; border-radius: 6px; }
+    .timer-adjust-input { background: #111; color: #fff; border: 1px solid #444; border-radius: 6px; padding: 5px 7px; }
+    .btn-cancel { background: #c31d1d; border-color: #ff6161; color: #fff; }
+    .order-late { border-color: #ff4d4d; animation: pulse-red 1s infinite alternate; }
+    .order-late .item-box-title { color: #ff6b6b; }
+    .order-on-time { border-color: #22c55e; }
+    @keyframes pulse-red { from { box-shadow: 0 0 8px rgba(255,80,80,0.4); } to { box-shadow: 0 0 16px rgba(255,40,40,0.8); } }
+    .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); }
+    .modal-content { background-color: var(--panel); color: var(--text); margin: 10% auto; padding: 20px; border: 2px solid var(--border); border-radius: 12px; width: 80%; max-width: 600px; box-shadow: 0 0 40px rgba(0,0,0,0.8); }
+    .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+    .close:hover { color: #fff; }
+    #chat-history { max-height: 300px; overflow-y: auto; border: 1px solid #444; padding: 10px; margin-bottom: 10px; background: #111; border-radius: 8px; }
+    #chat-reply-input { width: calc(100% - 80px); padding: 8px; border: 1px solid #444; background: #0c0c0c; color: var(--text); border-radius: 4px; }
+    #send-reply { padding: 8px 12px; background: var(--accent); color: #111; border: none; border-radius: 4px; cursor: pointer; margin-left: 8px; }
 
     #admin-dashboard { display: none; padding: 16px 20px 30px; background: #0c0c0c; min-height: 100vh; }
     .nav-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; border-bottom: 1px solid #333; padding-bottom: 10px; }
@@ -47,16 +60,22 @@
   <section id="admin-dashboard">
     <div class="nav-bar">
       <button class="nav-btn" id="nav-orders" onclick="switchTab('orders')">Orders</button>
+      <button class="nav-btn" id="nav-completed" onclick="switchTab('completed')">Completed Orders</button>
       <button class="nav-btn" id="nav-menu" onclick="switchTab('menu')">Menu Manager</button>
       <button class="nav-btn" id="nav-add" onclick="switchTab('add')">Add New</button>
-      <button class="nav-btn" id="nav-security" onclick="switchTab('security')">Security</button>
+      <button class="nav-btn" id="nav-feedback" onclick="switchTab('feedback')">Customer Feedback</button>      <button class="nav-btn" id="nav-help" onclick="switchTab('help')">Customer Help <span id="help-badge" class="badge" style="display:none;">●</span></button>      <button class="nav-btn" id="nav-security" onclick="switchTab('security')">Security</button>
       <button class="btn btn-secondary" onclick="resetMenu()">Reset Menu</button>
       <button class="btn btn-secondary" style="margin-left:auto;" onclick="logoutAdmin()">Logout</button>
     </div>
 
     <div id="orders-section" class="section">
       <h2>Orders Feed</h2>
-      <div class="scroll-area" id="orders-list"></div>
+      <div class="scroll-area" id="orders-feed"></div>
+    </div>
+
+    <div id="completed-section" class="section">
+      <h2>Completed Orders</h2>
+      <div class="scroll-area" id="completed-orders-list"></div>
     </div>
 
     <div id="menu-section" class="section">
@@ -97,10 +116,44 @@
         <button class="btn btn-primary" onclick="changePassword()">Update Password</button>
       </div>
     </div>
+
+    <div id="feedback-section" class="section">
+      <h2>Customer Feedback</h2>
+      <div class="scroll-area" id="feedback-list">
+        <p style="color: var(--muted);">Loading feedback...</p>
+      </div>
+    </div>
+
+    <div id="help-section" class="section">
+      <h2>Customer Help Messages</h2>
+      <div class="scroll-area" id="help-messages-container"></div>
+    </div>
   </section>
+
+  <!-- Chat Modal -->
+  <div id="chat-modal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeChatModal()">&times;</span>
+      <h3>Chat with Customer</h3>
+      <div id="chat-history"></div>
+      <div style="display: flex;">
+        <input id="chat-reply-input" placeholder="Type your reply..." onkeypress="if(event.key==='Enter') sendReply()">
+        <button id="send-reply" onclick="sendReply()">Send</button>
+      </div>
+    </div>
+  </div>
 
   <script src="scripts.js"></script>
   <script>
+    // Primary auth marker used across admin and order pages
+    const ADMIN_LOGIN_KEY = 'isAdminLoggedIn';
+
+    let currentChatIndex = null;
+
+    if (localStorage.getItem(ADMIN_LOGIN_KEY) !== 'true') {
+      window.location.href = 'login.html';
+    }
+
     function loginAdmin() {
       const user = (document.getElementById('admin-username').value || '').trim();
       const pass = (document.getElementById('admin-password').value || '').trim();
@@ -109,11 +162,19 @@
       if (user === 'Danish' && pass === 'Haji123') {
         sessionStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem(ADMIN_LOGIN_KEY, 'true');
         document.getElementById('admin-login').style.display = 'none';
         document.getElementById('admin-dashboard').style.display = 'block';
         setActiveSection('orders');
         loadOrders();
         displayMenuManager();
+        startAdminOrdersPolling();
+        updateHelpBadge();
+        // Mandatory auto-refresh every 1 second
+        setInterval(() => {
+          loadOrders();
+          renderHelpMessages();
+        }, 1000);
         return;
       }
 
@@ -122,23 +183,48 @@
     }
 
     function checkLoginState() {
-      if (sessionStorage.getItem('isLoggedIn') === 'true' || localStorage.getItem('isLoggedIn') === 'true') {
+      const loggedIn = sessionStorage.getItem('isLoggedIn') === 'true' || localStorage.getItem('isLoggedIn') === 'true' || localStorage.getItem(ADMIN_LOGIN_KEY) === 'true';
+      if (loggedIn) {
+        localStorage.setItem(ADMIN_LOGIN_KEY, 'true');
         document.getElementById('admin-login').style.display = 'none';
         document.getElementById('admin-dashboard').style.display = 'block';
         setActiveSection('orders');
         loadOrders();
         displayMenuManager();
+        startAdminOrdersPolling();
+        updateHelpBadge();
+        // Mandatory auto-refresh every 1 second
+        setInterval(() => {
+          loadOrders();
+          renderHelpMessages();
+        }, 1000);
       } else {
-        document.getElementById('admin-login').style.display = 'flex';
-        document.getElementById('admin-dashboard').style.display = 'none';
+        sessionStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem(ADMIN_LOGIN_KEY);
+        window.location.href = 'login.html';
       }
     }
 
     function logoutAdmin() {
       sessionStorage.removeItem('isLoggedIn');
       localStorage.removeItem('isLoggedIn');
-      checkLoginState();
+      localStorage.removeItem(ADMIN_LOGIN_KEY);
+      window.location.href = 'login.html';
     }
+
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'hajis_orders' || event.key === 'hajis_restaurant_orders' || event.key === 'hajis_orders_ts' || event.key === 'hajis_restaurant_orders_ts') {
+        loadOrders();
+      }
+      if (event.key === 'hajis_customer_help') {
+        updateHelpBadge();
+        // Refresh help display if currently on help tab
+        if (document.getElementById('help-section')?.classList.contains('active')) {
+          renderHelpMessages();
+        }
+      }
+    });
 
     function setupAddNewDishForm() {
       const fileInput = document.getElementById('new-image-file');
@@ -152,6 +238,100 @@
         }
       });
     }
+
+    function updateHelpBadge() {
+      const helpRequests = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+      const unread = helpRequests.some(req => !req.read);
+      document.getElementById('help-badge').style.display = unread ? 'inline' : 'none';
+    }
+
+    function loadHelpRequests() {
+      const helpRequests = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+      const helpList = document.getElementById('help-list');
+      if (!helpList) return;
+      renderHelpMessages();
+    }
+
+    function renderHelpMessages() {
+      const helpRequests = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+      const helpList = document.getElementById('help-messages-container');
+      if (!helpRequests.length) {
+        helpList.innerHTML = '<p style="color: var(--muted);">No help requests yet.</p>';
+        return;
+      }
+      helpList.innerHTML = helpRequests.map((req, index) => `
+        <div class="item-box">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
+            <strong style="color:#fff;">${req.name}</strong>
+            <a href="tel:${req.phone}" style="color:#22c55e;">📞 ${req.phone}</a>
+          </div>
+          <div style="color:#d0d0d0; white-space:pre-wrap;">${req.message}</div>
+          <div style="margin-top:8px; font-size:0.8rem; color:#888;">${new Date(req.timestamp).toLocaleString()}</div>
+          ${req.replies && req.replies.length ? `<div style="margin-top:8px; color:#ffd700;">${req.replies.length} replies</div>` : ''}
+          <button class="btn btn-tiny" style="margin-top:8px;" onclick="openChatModal(${index})">Reply</button>
+        </div>
+      `).join('');
+      // Mark as read
+      helpRequests.forEach(req => req.read = true);
+      localStorage.setItem('hajis_customer_help', JSON.stringify(helpRequests));
+      updateHelpBadge();
+    }
+
+    function openChatModal(index) {
+      currentChatIndex = index;
+      const messages = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+      const msg = messages[index];
+      document.querySelector('#chat-modal h3').textContent = `Chat with ${msg.name}`;
+      displayChatHistory(index);
+      document.getElementById('chat-modal').style.display = 'block';
+    }
+
+    function closeChatModal() {
+      document.getElementById('chat-modal').style.display = 'none';
+      currentChatIndex = null;
+    }
+
+    function displayChatHistory(index) {
+      const messages = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+      const msg = messages[index];
+      if (!msg) return;
+      let html = `<div style="margin-bottom:10px; padding:8px; background:#222; border-radius:4px;"><strong>${msg.name}</strong> (${msg.phone}): ${msg.message}<br><small style="color:#888;">${new Date(msg.timestamp).toLocaleString()}</small></div>`;
+      if (msg.replies && msg.replies.length) {
+        msg.replies.forEach(reply => {
+          html += `<div style="margin-bottom:10px; padding:8px; background:#333; border-radius:4px; margin-left:20px;"><strong>Admin</strong>: ${reply.message}<br><small style="color:#888;">${new Date(reply.timestamp).toLocaleString()}</small></div>`;
+        });
+      }
+      document.getElementById('chat-history').innerHTML = html;
+      // Scroll to bottom
+      const history = document.getElementById('chat-history');
+      history.scrollTop = history.scrollHeight;
+    }
+
+    function sendReply() {
+      const input = document.getElementById('chat-reply-input');
+      const message = input.value.trim();
+      if (!message || currentChatIndex === null) return;
+      const messages = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+      if (!messages[currentChatIndex]) return;
+      if (!messages[currentChatIndex].replies) messages[currentChatIndex].replies = [];
+      messages[currentChatIndex].replies.push({
+        message: message,
+        timestamp: new Date().toISOString()
+      });
+      localStorage.setItem('hajis_customer_help', JSON.stringify(messages));
+      input.value = '';
+      displayChatHistory(currentChatIndex);
+      // Dispatch event for real-time updates
+      window.dispatchEvent(new StorageEvent('storage', { key: 'hajis_customer_help' }));
+    }
+
+    window.clearAllHistory = function() {
+      if (confirm('Are you sure you want to clear all history?')) {
+        localStorage.removeItem('hajis_orders');
+        localStorage.removeItem('hajis_customer_help');
+        location.reload();
+      }
+    };
 
     window.addEventListener('DOMContentLoaded', () => {
       checkLoginState();
