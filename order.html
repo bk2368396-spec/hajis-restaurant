@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Online - Haji's Restaurant</title>
+  <link rel="stylesheet" href="style.css">
+  <meta name="description" content="Place your order online at Haji's Restaurant with delivery details and payment options.">
+  <meta name="keywords" content="order online, delivery, Haji's Restaurant, checkout">
+  <meta property="og:title" content="Order Online - Haji's Restaurant" />
+  <meta property="og:description" content="Checkout easily with your cart and delivery details for fast service." />
+  <meta property="og:url" content="https://hajisrestaurant.pages.dev/order.html" />
+  <link rel="canonical" href="https://hajisrestaurant.pages.dev/order.html" />
+  <script type="application/ld+json">{
+    "@context":"https://schema.org",
+    "@type":"OrderAction",
+    "target":"https://hajisrestaurant.pages.dev/order.html",
+    "actionStatus":"PotentialActionStatus"
+  }</script>
+  <script src="scripts.js" defer></script>
+</head>
+<body>
+<nav class="navbar"><div class="container"><a href="index.html" class="nav-brand"><span class="red">HAJI'S</span><span class="sub">PAKISTANI & INDIAN FUSION</span></a><ul class="nav-links"><li><a href="index.html">Home</a></li><li><a href="menu.html">Menu</a></li><li><a href="order.html" class="active">Order Online</a></li><li><a href="gallery.html">Gallery</a></li><li><a href="catering.html">Catering</a></li><li><a href="reviews.html">Reviews</a></li><li><a href="about.html">About</a></li><li><a href="contact.html">Contact</a></li></ul><button class="nav-toggle" onclick="document.getElementById('mob-menu').classList.toggle('open')">☰</button></div><div id="mob-menu" class="nav-mobile"><a href="index.html">Home</a><a href="menu.html">Menu</a><a href="order.html">Order Online</a><a href="gallery.html">Gallery</a><a href="catering.html">Catering</a><a href="reviews.html">Reviews</a><a href="about.html">About</a><a href="contact.html">Contact</a></div></nav>
+
+<div class="pt-20">
+<section class="section text-center">
+  <div class="container">
+    <p class="section-label">Order Online</p>
+    <h1 class="section-title">Place Your Order</h1>
+    <p class="section-desc">Browse our menu, add items to cart, and checkout for fast delivery!</p>
+    <div style="margin-bottom:40px"><a href="menu.html" class="btn btn-primary">Browse Full Menu</a></div>
+  </div>
+</section>
+
+<section class="section section-card">
+  <div class="container" style="max-width:900px">
+    <h2 class="section-title text-center">Your Cart</h2>
+    <p id="empty-cart" class="text-center" style="color:var(--muted-fg);font-size:1.1rem">Your cart is empty. Visit the <a href="menu.html" style="color:var(--primary)">Menu page</a> to add items!</p>
+
+    <div id="cart-container" style="display:none;margin:24px auto 8px; max-width:100%;">
+      <table style="width:100%; border-collapse:collapse; margin-bottom:12px;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border)">
+            <th style="text-align:left;padding:6px">Item</th>
+            <th style="text-align:right;padding:6px">Price</th>
+            <th style="text-align:center;padding:6px">Qty</th>
+            <th style="text-align:right;padding:6px">Total</th>
+            <th style="text-align:center;padding:6px">Action</th>
+          </tr>
+        </thead>
+        <tbody id="cart-table-body"></tbody>
+      </table>
+      <div class="cart-total" style="justify-content:flex-end; margin-bottom:12px">Total: <span id="cart-total">$0.00</span></div>
+      <button class="btn btn-outline-gold" onclick="clearCart()" style="float:right;">Clear Cart</button>
+      <div style="clear:both"></div>
+    </div>
+
+    <div style="max-width:600px;margin:48px auto 0">
+      <h3 style="font-size:1.5rem;font-weight:700;margin-bottom:24px">Delivery Details</h3>
+      <div class="form-card" id="order-form">
+        <input id="customer-name" class="form-input" type="text" placeholder="Full Name" required>
+        <input id="customer-phone" class="form-input" type="tel" placeholder="Phone Number" required>
+        <textarea id="customer-address" class="form-input" rows="3" placeholder="Delivery Address" required></textarea>
+        <div class="payment-btns">
+          <button id="payment-cash" class="payment-btn active" type="button">Cash on Delivery</button>
+          <button id="payment-card" class="payment-btn" type="button">Card Payment</button>
+        </div>
+
+        <p id="order-error" style="color:#ff6b6b; font-weight:600; display:none; margin:10px 0; text-align:center;"></p>
+
+        <div id="card-details" style="display:none; margin-bottom:16px;">
+          <input id="card-number" class="form-input" type="text" placeholder="Card Number" maxlength="19">
+          <div class="form-row">
+            <input id="card-expiry" class="form-input" type="text" placeholder="MM/YY" maxlength="5">
+            <input id="card-cvv" class="form-input" type="text" placeholder="CVV" maxlength="4">
+          </div>
+        </div>
+
+        <button class="btn-submit" type="button" onclick="processOrder()">Place Order</button>
+        <div id="order-status-panel" style="display:none; margin-top:16px; text-align:center;">
+          <div class="status-spinner" id="status-spinner"></div>
+          <p id="order-status-text" style="color: var(--gold); font-weight:600; margin-top:10px;">Order Sent! Waiting for Haji's Restaurant to accept...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="order-success" style="display:none;">
+  <div class="container" style="max-width:600px;">
+    <div class="order-success-card">
+      <div class="success-icon">✔</div>
+      <h2>Order Accepted!</h2>
+      <p>Delivery in progress.</p>
+      <div class="tracker">
+        <strong id="order-success-timer">60:00</strong>
+      </div>
+      <p class="tracker-sub">Please keep this page open for real-time tracking.</p>
+    </div>
+  </div>
+</section>
+</div>
+
+<footer class="footer"><div class="container"><div class="footer-grid"><div><p style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:12px"><span class="red">HAJI'S</span> <span class="gold">RESTAURANT</span></p><p style="color:var(--muted-fg);font-size:0.875rem">Pakistani and Indian Fusion Kitchen.</p></div><div><h4>Quick Links</h4><a href="menu.html">Menu</a><a href="order.html">Order Online</a><a href="gallery.html">Gallery</a><a href="catering.html">Catering</a></div><div><h4>Connect</h4><a href="about.html">About Us</a><a href="reviews.html">Reviews</a><a href="contact.html">Contact</a></div></div><div class="footer-bottom">© 2026 Haji's Restaurant. All rights reserved.</div></div></footer>
+<a href="https://wa.me/923102041770" target="_blank" class="whatsapp-fab" aria-label="Chat on WhatsApp">📱</a>
+</body>
+</html>

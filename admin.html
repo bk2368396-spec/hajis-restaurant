@@ -1,0 +1,162 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard - Haji's Restaurant</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    :root { --bg: #030303; --panel: rgba(18,18,18,0.94); --border: #d4af37; --text: #fff; --muted: #ddd; --accent: #ffd700; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #010101; color: var(--text); }
+    .admin-overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.9); z-index: 1000; }
+    .login-card { width: min(420px, 90vw); background: var(--panel); border: 2px solid var(--border); border-radius: 14px; box-shadow: 0 0 40px rgba(0,0,0,0.8); padding: 22px; }
+    .login-card h1 { margin: 0 0 15px; color: var(--accent); letter-spacing: 1px; }
+    .form-group { margin: 10px 0; }
+    .form-group input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #444; background: #111; color: var(--text); }
+    .btn { border: 1px solid var(--accent); background: rgba(255,215,0,0.2); color: #101010; font-weight: 700; border-radius: 8px; padding: 10px 14px; cursor: pointer; }
+    .btn-primary { background: var(--accent); color: #111; }
+    .btn-secondary { background: #303030; color: #fff; }
+    .error { color: #ff6b6b; margin-top: 8px; display: none; }
+
+    #admin-dashboard { display: none; padding: 16px 20px 30px; background: #0c0c0c; min-height: 100vh; }
+    .nav-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+    .nav-btn { border: 1px solid #333; background: #111; color: #f4f4f4; border-radius: 8px; padding: 9px 12px; cursor: pointer; }
+    .nav-btn.active { background: var(--accent); color: #111; border-color: var(--accent); }
+    .section { display: none; background: var(--panel); border: 1px solid #333; border-radius: 12px; padding: 14px; margin-bottom: 16px; }
+    .section.active { display: block; }
+    .flex-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .item-box { border: 1px solid #333; border-radius: 10px; padding: 10px; background: #111; margin-bottom: 10px; }
+    .item-label { color: #bbb; font-size: 0.9rem; }
+    .scroll-area { max-height: 450px; overflow-y: auto; margin-top: 10px; }
+    .small-link { color: var(--accent); cursor: pointer; }
+    .sec-form input { width: 100%; margin: 8px 0; padding: 9px; border-radius: 8px; background: #0c0c0c; border: 1px solid #444; color: var(--text); }
+  </style>
+</head>
+<body>
+  <div id="admin-login" class="admin-overlay">
+    <div class="login-card">
+      <h1>Haji's Admin Login</h1>
+      <div class="form-group"><input id="admin-username" type="text" placeholder="Username" value="Danish" /></div>
+      <div class="form-group"><input id="admin-password" type="password" placeholder="Password" value="Haji123" /></div>
+      <div class="form-group"><button id="loginBtn" class="btn btn-primary" onclick="loginAdmin()">Login</button></div>
+      <p id="admin-error" class="error"></p>
+    </div>
+  </div>
+
+  <section id="admin-dashboard">
+    <div class="nav-bar">
+      <button class="nav-btn" id="nav-orders" onclick="switchTab('orders')">Orders</button>
+      <button class="nav-btn" id="nav-menu" onclick="switchTab('menu')">Menu Manager</button>
+      <button class="nav-btn" id="nav-add" onclick="switchTab('add')">Add New</button>
+      <button class="nav-btn" id="nav-security" onclick="switchTab('security')">Security</button>
+      <button class="btn btn-secondary" onclick="resetMenu()">Reset Menu</button>
+      <button class="btn btn-secondary" style="margin-left:auto;" onclick="logoutAdmin()">Logout</button>
+    </div>
+
+    <div id="orders-section" class="section">
+      <h2>Orders Feed</h2>
+      <div class="scroll-area" id="orders-list"></div>
+    </div>
+
+    <div id="menu-section" class="section">
+      <h2>Menu Manager</h2>
+      <div class="scroll-area" id="menu-manager"></div>
+    </div>
+
+    <div id="add-section" class="section">
+      <h2>Add New Dish</h2>
+      <div class="form-group"><input id="new-name" type="text" placeholder="Name" /></div>
+      <div class="form-group"><input id="new-price" type="number" min="0" step="0.01" placeholder="Price" /></div>
+      <div class="form-group"><label class="item-label" for="new-image-file">Image Upload (select filename or leave blank for placeholder):</label><input id="new-image-file" type="file" accept="image/*" /></div>
+      <div class="form-group"><label class="item-label" for="new-image">Image filename (auto-filled from upload or manual):</label><input id="new-image" type="text" placeholder="Haleem.jpg" /></div>
+      <div class="form-group"><label class="item-label" for="new-category">Category:</label><select id="new-category">
+        <option value="Starters">Starters</option>
+        <option value="BBQ">BBQ</option>
+        <option value="Meat Curries">Meat Curries</option>
+        <option value="Karahi">Karahi</option>
+        <option value="Biryani">Biryani</option>
+        <option value="Vegan/Veggie Curries">Vegan/Veggie Curries</option>
+        <option value="Pizzas">Pizzas</option>
+        <option value="Burgers">Burgers</option>
+        <option value="Brunch">Brunch</option>
+        <option value="Breads/Rice">Breads/Rice</option>
+        <option value="Drinks">Drinks</option>
+        <option value="Desserts">Desserts</option>
+        <option value="Uncategorized">Uncategorized</option>
+      </select></div>
+      <div class="form-group"><button class="btn btn-primary" onclick="addNewDish()">Add Dish</button></div>
+    </div>
+
+    <div id="security-section" class="section">
+      <h2>Security</h2>
+      <div class="sec-form">
+        <input id="current-password" type="password" placeholder="Current Password" />
+        <input id="new-password" type="password" placeholder="New Password" />
+        <input id="confirm-password" type="password" placeholder="Confirm New Password" />
+        <button class="btn btn-primary" onclick="changePassword()">Update Password</button>
+      </div>
+    </div>
+  </section>
+
+  <script src="scripts.js"></script>
+  <script>
+    function loginAdmin() {
+      const user = (document.getElementById('admin-username').value || '').trim();
+      const pass = (document.getElementById('admin-password').value || '').trim();
+      const adminError = document.getElementById('admin-error');
+
+      if (user === 'Danish' && pass === 'Haji123') {
+        sessionStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('isLoggedIn', 'true');
+        document.getElementById('admin-login').style.display = 'none';
+        document.getElementById('admin-dashboard').style.display = 'block';
+        setActiveSection('orders');
+        loadOrders();
+        displayMenuManager();
+        return;
+      }
+
+      adminError.textContent = 'Wrong Password. Use Danish / Haji123';
+      adminError.style.display = 'block';
+    }
+
+    function checkLoginState() {
+      if (sessionStorage.getItem('isLoggedIn') === 'true' || localStorage.getItem('isLoggedIn') === 'true') {
+        document.getElementById('admin-login').style.display = 'none';
+        document.getElementById('admin-dashboard').style.display = 'block';
+        setActiveSection('orders');
+        loadOrders();
+        displayMenuManager();
+      } else {
+        document.getElementById('admin-login').style.display = 'flex';
+        document.getElementById('admin-dashboard').style.display = 'none';
+      }
+    }
+
+    function logoutAdmin() {
+      sessionStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('isLoggedIn');
+      checkLoginState();
+    }
+
+    function setupAddNewDishForm() {
+      const fileInput = document.getElementById('new-image-file');
+      const imageField = document.getElementById('new-image');
+      if (!fileInput || !imageField) return;
+
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (file && file.name) {
+          imageField.value = file.name;
+        }
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      checkLoginState();
+      setupAddNewDishForm();
+    });
+  </script>
+</body>
+</html>

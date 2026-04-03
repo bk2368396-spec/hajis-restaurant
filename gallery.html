@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gallery - Haji's Restaurant</title>
+  <meta name="description" content="Gallery of Haji's Restaurant dishes and ambiance." />
+  <meta name="keywords" content="gallery, food, restaurant, Haji's" />
+  <meta property="og:title" content="Gallery - Haji's Restaurant" />
+  <meta property="og:description" content="Explore stunning food and ambiance photos." />
+  <meta property="og:image" content="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=1200&q=80" />
+  <meta property="og:url" content="https://hajisrestaurant.pages.dev/gallery.html" />
+  <link rel="canonical" href="https://hajisrestaurant.pages.dev/gallery.html" />
+  <link rel="stylesheet" href="style.css">
+  <script src="scripts.js" defer></script>
+</head>
+<body>
+<nav class="navbar"><div class="container"><a href="index.html" class="nav-brand"><span class="red">HAJI'S</span><span class="sub">PAKISTANI & INDIAN FUSION</span></a><ul class="nav-links"><li><a href="index.html">Home</a></li><li><a href="menu.html">Menu</a></li><li><a href="order.html">Order Online</a></li><li><a href="gallery.html" class="active">Gallery</a></li><li><a href="catering.html">Catering</a></li><li><a href="reviews.html">Reviews</a></li><li><a href="about.html">About</a></li><li><a href="contact.html">Contact</a></li></ul><button class="nav-toggle" onclick="document.getElementById('mob-menu').classList.toggle('open')">☰</button></div><div id="mob-menu" class="nav-mobile"><a href="index.html">Home</a><a href="menu.html">Menu</a><a href="order.html">Order Online</a><a href="gallery.html">Gallery</a><a href="catering.html">Catering</a><a href="reviews.html">Reviews</a><a href="about.html">About</a><a href="contact.html">Contact</a></div></nav>
+
+<div class="pt-20">
+<section class="section text-center">
+  <div class="container">
+    <p class="section-label">Visual Feast</p>
+    <h1 class="section-title">Gallery</h1>
+    <p class="section-desc">A glimpse into the vibrant flavors and warm ambiance of Haji's Restaurant.</p>
+
+    <div id="galleryGrid" class="gallery-grid">
+      <!-- Images are injected here by JavaScript -->
+    </div>
+  </section>
+</div>
+
+<footer class="footer"><div class="container"><div class="footer-grid"><div><p style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:12px"><span class="red">HAJI'S</span> <span class="gold">RESTAURANT</span></p><p style="color:var(--muted-fg);font-size:0.875rem">Pakistani and Indian Fusion Kitchen.</p></div><div><h4>Quick Links</h4><a href="menu.html">Menu</a><a href="order.html">Order Online</a><a href="gallery.html">Gallery</a><a href="catering.html">Catering</a></div><div><h4>Connect</h4><a href="about.html">About Us</a><a href="reviews.html">Reviews</a><a href="contact.html">Contact</a></div></div><div class="footer-bottom">© 2026 Haji's Restaurant. All rights reserved.</div></div></footer>
+<script>
+  const galleryContainer = document.getElementById('galleryGrid');
+  const imageFolder = 'images/';
+  const placeholderImage = 'https://via.placeholder.com/400x250?text=Haji+Dish';
+
+  function getGalleryItems() {
+    if (typeof getRestaurantMenu === 'function') {
+      return getRestaurantMenu();
+    }
+
+    try {
+      const stored = localStorage.getItem('restaurantMenu');
+      if (!stored) return [];
+      const parsed = JSON.parse(stored);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      console.warn('hajis: gallery getGalleryItems parse failed', error);
+      return [];
+    }
+  }
+
+  function resolveGalleryImage(item) {
+    if (!item || !item.name) return `${imageFolder}${placeholderImage}`;
+
+    let candidate = item.image ? item.image.toString().trim() : '';
+
+    const isUrl = /^https?:\/\//i.test(candidate);
+    const isData = /^data:/i.test(candidate);
+    const hasImagesPrefix = candidate.startsWith('images/');
+
+    if (candidate && (isUrl || isData || hasImagesPrefix)) {
+      return candidate;
+    }
+
+    if (candidate) {
+      return `${imageFolder}${candidate}`;
+    }
+
+    // names mapped image fallback from menu logic, reuse same if available:
+    if (typeof getMenuImage === 'function') {
+      const mapped = getMenuImage(item.name);
+      if (mapped) return `${imageFolder}${mapped}`;
+    }
+
+    return `${imageFolder}${placeholderImage}`;
+  }
+
+  function createGalleryCard(item) {
+    const card = document.createElement('article');
+    card.className = 'gallery-card';
+
+    const img = document.createElement('img');
+    const src = resolveGalleryImage(item);
+    img.src = src;
+    img.alt = item.name || 'Gallery image';
+    img.loading = 'lazy';
+    img.style.height = '250px';
+    img.style.objectFit = 'cover';
+    img.style.borderRadius = '12px';
+
+    const caption = document.createElement('p');
+    caption.textContent = item.name || 'Menu Item';
+    caption.style.margin = '10px';
+    caption.style.fontSize = '0.9rem';
+    caption.style.fontWeight = '600';
+
+    card.appendChild(img);
+    card.appendChild(caption);
+
+    return card;
+  }
+
+  function renderGallery() {
+    try {
+      if (!galleryContainer) return;
+
+      const items = getGalleryItems();
+      const unique = [];
+      const seenNames = new Set();
+
+      items.forEach((item) => {
+        if (!item || !item.name) return;
+        const key = item.name.trim().toLowerCase();
+        if (seenNames.has(key)) return;
+        seenNames.add(key);
+        unique.push(item);
+      });
+
+      galleryContainer.innerHTML = '';
+
+      if (unique.length === 0) {
+        galleryContainer.innerHTML = '<p class="gallery-status">No menu items available to display in the gallery.</p>';
+        return;
+      }
+
+      unique.forEach(item => {
+        const card = createGalleryCard(item);
+        galleryContainer.appendChild(card);
+      });
+    } catch (error) {
+      console.error('hajis: renderGallery error', error);
+      if (galleryContainer) {
+        galleryContainer.innerHTML = '<p class="gallery-status">Unable to load gallery right now.</p>';
+      }
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', renderGallery);
+</script>
+
+<a href="https://wa.me/923102041770" target="_blank" class="whatsapp-fab" aria-label="Chat on WhatsApp">📱</a>
+</body>
+</html>
