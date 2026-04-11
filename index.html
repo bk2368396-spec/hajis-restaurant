@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Haji's Restaurant - Authentic Pakistani & Indian Fusion</title>
+  <meta name="description" content="Haji's Restaurant — Premium Pakistani & Indian Fusion Kitchen. Order online for fast delivery.">
+  <meta name="keywords" content="Haji's Restaurant, Pakistani, Indian, Fusion, Biryani, Curry, Delivery, Takeout" />
+  <meta property="og:title" content="Haji's Restaurant | Authentic Pakistani & Indian Fusion" />
+  <meta property="og:description" content="Premium Pakistani and Indian fusion dishes. Order online for delivery or pickup." />
+  <meta property="og:image" content="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=1200&q=80" />
+  <meta property="og:url" content="https://hajisrestaurant.pages.dev/index.html" />
+  <meta property="og:type" content="website" />
+  <link rel="canonical" href="https://hajisrestaurant.pages.dev/index.html" />
+  <script type="application/ld+json">{
+    "@context":"https://schema.org",
+    "@type":"Restaurant",
+    "name":"Haji's Restaurant",
+    "telephone":"+923102041770",
+    "address":{
+      "@type":"PostalAddress",
+      "addressLocality":"Karachi",
+      "addressCountry":"PK"
+    },
+    "servesCuisine":"Pakistani, Indian"
+  }</script>
+  <link rel="stylesheet" href="style.css">
+  <script src="scripts.js" type="module"></script>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="nav-brand"><span class="red">HAJI'S</span><span class="sub">PAKISTANI & INDIAN FUSION</span></a>
+    <ul class="nav-links">
+      <li><a href="index.html" class="active">Home</a></li>
+      <li><a href="menu.html">Menu</a></li>
+      <li><a href="order.html">Order Online</a></li>
+      <li><a href="track-order.html">TRACK ORDER</a></li>
+      <li><a href="gallery.html">Gallery</a></li>
+      <li><a href="catering.html">Catering</a></li>
+      <li><a href="reviews.html">Reviews</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="contact.html">Contact</a></li>
+    </ul>
+    <button class="nav-toggle" onclick="document.getElementById('mob-menu').classList.toggle('open')">☰</button>
+  </div>
+  <div id="mob-menu" class="nav-mobile">
+    <a href="index.html">Home</a><a href="menu.html">Menu</a><a href="order.html">Order Online</a><a href="track-order.html">TRACK ORDER</a>
+    <a href="gallery.html">Gallery</a><a href="catering.html">Catering</a><a href="reviews.html">Reviews</a>
+    <a href="about.html">About</a><a href="contact.html">Contact</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg">
+    <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=1920&q=80" alt="Haji's BBQ Platter">
+    <div class="hero-overlay"></div>
+  </div>
+  <div class="hero-content">
+    <p class="welcome">Welcome to</p>
+    <h1><span>Haji's</span> <span class="red">Restaurant</span></h1>
+    <p class="subtitle">Pakistani and Indian Fusion Kitchen — Crafted with passion, served with love.</p>
+    <div class="hero-buttons">
+      <a href="menu.html" class="btn btn-primary">View Menu</a>
+      <a href="order.html" class="btn btn-outline-gold">Order Now</a>
+    </div>
+  </div>
+</section>
+
+<!-- WHY HAJIS -->
+<section class="section text-center">
+  <div class="container">
+    <p class="section-label">Discover</p>
+    <h2 class="section-title">Why Haji's?</h2>
+    <p class="section-desc">From sizzling biryanis to fusion curry pizzas — experience Pakistani & Indian flavors like never before.</p>
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+      <a href="menu.html" class="btn btn-primary">Explore Full Menu</a>
+      <a href="order.html" class="btn btn-outline-gold">Order Online</a>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT SECTION -->
+<section class="section section-card text-center">
+  <div class="container max-w-3xl">
+    <p class="section-label">Our Story</p>
+    <h2 class="section-title">About Haji's</h2>
+    <p class="section-desc">For over two decades, Haji's Restaurant has been serving the finest Pakistani BBQ and traditional cuisine. Our secret? Premium ingredients, time-honored recipes passed down through generations, and a passion for perfection in every dish we serve.</p>
+    <div class="features-row">
+      <div class="feature">
+        <div class="feature-icon">🔥</div>
+        <h3>Charcoal Grilled</h3>
+        <p style="color:var(--muted-fg);font-size:0.875rem">Authentic BBQ over real charcoal fire</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">⏱️</div>
+        <h3>Fast Delivery</h3>
+        <p style="color:var(--muted-fg);font-size:0.875rem">Hot food at your door within 45 minutes</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">📍</div>
+        <h3>Multiple Branches</h3>
+        <p style="color:var(--muted-fg);font-size:0.875rem">Conveniently located across the city</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <p style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:12px"><span class="red">HAJI'S</span> <span class="gold">RESTAURANT</span></p>
+        <p style="color:var(--muted-fg);font-size:0.875rem">Pakistani and Indian Fusion Kitchen — Crafted with passion, served with love.</p>
+        <div class="footer-links">
+          <a href="#">Terms & Policies</a>
+          <a href="#">Accessibility Statement</a>
+        </div>
+      </div>
+      <div class="footer-contact">
+        <h4>Contact Info</h4>
+        <p><span class="icon">📞</span> (650) 507-3959</p>
+        <p><span class="icon">✉️</span> Hajisstaff@gmail.com</p>
+      </div>
+      <div>
+        <h4>Newsletter</h4>
+        <div class="newsletter-signup">
+          <input type="email" placeholder="Enter your email">
+          <button>Send</button>
+        </div>
+      </div>
+      <div class="footer-locations">
+        <h4>Locations</h4>
+        <ul>
+          <li>Hajis Restaurant Menlo Park</li>
+          <li>San Jose</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">© 2026 Haji's Restaurant. All rights reserved.</div>
+  </div>
+</footer>
+
+<!-- Floating Chat Button -->
+<button class="help-fab" onclick="openChat()">💬</button>
+
+<!-- Chat Popup -->
+<div id="help-popup" class="help-popup">
+  <div class="chat-header" style="background:#cc0000 !important;color:#fff !important;">
+    <h3 style="color:#fff !important;">Haji's Support Bot</h3>
+    <button class="chat-close" onclick="closeChat()">×</button>
+  </div>
+  <div class="chat-messages" id="chat-messages">
+    <div class="message bot">Hello! Welcome to Haji's Support.</div>
+  </div>
+  <div class="chat-input-area">
+    <textarea id="chat-input" placeholder="Type your message..." rows="3"></textarea>
+    <button id="hajiSendBtn" style="background:#cc0000 !important;color:#fff !important;border:1px solid #cc0000 !important;" onclick="sendMessage()">Send to Haji's</button>
+  </div>
+</div>
+
+<!-- Customer Feedback Section -->
+<div id="feedback-section" style="position: fixed; bottom: 100px; right: 20px; width: 300px; background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 20px; z-index: 999; display: none;">
+  <h3 style="margin: 0 0 15px; color: #333;">Rate Your Experience</h3>
+  <div style="margin-bottom: 12px;">
+    <label style="display: block; margin-bottom: 8px; color: #666; font-size: 14px;">Rating</label>
+    <select id="feedback-rating" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+      <option value="0">Select rating...</option>
+      <option value="1">⭐ Poor</option>
+      <option value="2">⭐⭐ Fair</option>
+      <option value="3">⭐⭐⭐ Good</option>
+      <option value="4">⭐⭐⭐⭐ Very Good</option>
+      <option value="5">⭐⭐⭐⭐⭐ Excellent</option>
+    </select>
+  </div>
+  <div style="margin-bottom: 12px;">
+    <label style="display: block; margin-bottom: 8px; color: #666; font-size: 14px;">Message</label>
+    <textarea id="feedback-message" placeholder="Share your feedback..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: Arial; font-size: 14px; resize: vertical; min-height: 80px;"></textarea>
+  </div>
+  <div style="display: flex; gap: 8px;">
+    <button onclick="window.submitCustomerFeedback()" style="flex: 1; padding: 8px; background: #cc0000; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Submit</button>
+    <button onclick="document.getElementById('feedback-section').style.display='none';" style="flex: 1; padding: 8px; background: #f0f0f0; color: #333; border: none; border-radius: 4px; cursor: pointer;">Close</button>
+  </div>
+</div>
+
+<!-- Feedback Toggle Button -->
+<button onclick="document.getElementById('feedback-section').style.display = document.getElementById('feedback-section').style.display === 'none' ? 'block' : 'none';" style="position: fixed; bottom: 160px; right: 20px; width: 50px; height: 50px; background: #ff9800; color: white; border: none; border-radius: 50%; font-size: 20px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 998; display: flex; align-items: center; justify-content: center;" title="Leave Feedback">⭐</button>
+
+<script>
+let chatInterval = null;
+
+function openChat() {
+  document.getElementById('help-popup').style.display = 'flex';
+  loadCustomerChat();
+  chatInterval = setInterval(loadCustomerChat, 2000);
+}
+
+function closeChat() {
+  document.getElementById('help-popup').style.display = 'none';
+  if (chatInterval) {
+    clearInterval(chatInterval);
+    chatInterval = null;
+  }
+}
+
+function loadCustomerChat() {
+  const messages = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+  const chatMessages = document.getElementById('chat-messages');
+  // Keep the welcome message
+  const welcome = chatMessages.querySelector('.message.bot');
+  chatMessages.innerHTML = '';
+  if (welcome) chatMessages.appendChild(welcome.cloneNode(true));
+  // Add all customer messages and admin replies
+  messages.filter(m => m.name === 'Chat User').forEach(m => {
+    addMessage(m.message, 'user');
+    if (m.replies) {
+      m.replies.forEach(r => {
+        addMessage(r.message, 'bot');
+      });
+    }
+  });
+  // Scroll to bottom
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const message = input.value.trim();
+  if (!message) return;
+
+  // Add user message to chat UI
+  addMessage(message, 'user');
+  input.value = '';
+
+  // Save to Firestore if available
+  if (typeof window.sendMessageToFirestore === 'function') {
+    window.sendMessageToFirestore(message);
+  }
+
+  // Also save to localStorage for backward compatibility
+  const helpRequests = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+  helpRequests.push({
+    name: 'Chat User',
+    phone: 'Chat Support',
+    message: message,
+    timestamp: new Date().toISOString(),
+    read: false,
+    replies: []
+  });
+  localStorage.setItem('hajis_customer_help', JSON.stringify(helpRequests));
+  // Dispatch storage event for real-time updates
+  window.dispatchEvent(new StorageEvent('storage', { key: 'hajis_customer_help' }));
+  
+  // Show auto-reply message after 2 seconds
+  setTimeout(() => {
+    addMessage('Your message has been forwarded to our management.', 'bot');
+  }, 2000);
+}
+
+function addMessage(text, type) {
+  const messagesDiv = document.getElementById('chat-messages');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `message ${type}`;
+  messageDiv.textContent = text;
+  messagesDiv.appendChild(messageDiv);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+</script>
+
+<!-- Firestore Listeners Module -->
+<script type="module">
+  import { 
+    db, 
+    collection, 
+    onSnapshot, 
+    query, 
+    where,
+    orderBy,
+    addDoc,
+    updateDoc,
+    getDocs,
+    doc,
+    arrayUnion,
+    serverTimestamp
+  } from './firebase-config.js';
+
+  // Generate or retrieve customer ID
+  let customerId = localStorage.getItem('hajis_customer_id');
+  if (!customerId) {
+    customerId = 'cust_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('hajis_customer_id', customerId);
+  }
+  window.hajisCustomerId = customerId;
+
+  // ==================== FIRESTORE PRODUCTS LISTENER ====================
+  // Listen for real-time menu updates from Firestore 'hajis_menu' collection
+  const productsRef = collection(db, 'hajis_menu');
+  const productsQuery = query(productsRef, orderBy('timestamp', 'desc'));
+
+  onSnapshot(productsQuery, (snapshot) => {
+    console.log('📡 Real-time menu update from Firestore hajis_menu collection');
+    const products = [];
+    snapshot.forEach(docSnapshot => {
+      products.push({ id: docSnapshot.id, ...docSnapshot.data() });
+    });
+    window.firestoreProducts = products;
+    // Trigger any menu refresh if needed
+    window.dispatchEvent(new CustomEvent('firestore_products_updated', { detail: products }));
+  }, (error) => {
+    console.error('❌ Error in Firestore hajis_menu listener:', error);
+  });
+
+  // ==================== FIRESTORE SUPPORT MESSAGES LISTENER ====================
+  // Listen for chat updates for the current customer
+  function setupCustomerChatListener() {
+    const supportRef = collection(db, 'support_messages');
+    const supportQuery = query(supportRef, where('customerId', '==', customerId));
+
+    onSnapshot(supportQuery, (snapshot) => {
+      const entries = [];
+      snapshot.forEach(docSnapshot => {
+        const chat = docSnapshot.data();
+        entries.push({ id: docSnapshot.id, ...chat });
+      });
+
+      entries.sort((a, b) => {
+        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return aTime - bTime;
+      });
+
+      if (entries.length > 0) {
+        window.firestoreCurrentChat = entries[0];
+        if (document.getElementById('help-popup').style.display === 'flex' || 
+            document.getElementById('help-popup').style.display === 'block') {
+          loadFirestoreChat();
+        }
+      }
+    }, (error) => {
+      console.error('❌ Error in Firestore support messages listener:', error);
+    });
+  }
+
+  setupCustomerChatListener();
+
+  // ==================== HELPER FUNCTIONS ====================
+  window.sendMessageToFirestore = async function(message) {
+    if (!message) return;
+
+    try {
+      const supportRef = collection(db, 'support_messages');
+      const supportQuery = query(supportRef, where('customerId', '==', customerId));
+      const snapshot = await getDocs(supportQuery);
+
+      if (!snapshot.empty) {
+        const docRef = snapshot.docs[0].ref;
+        await updateDoc(docRef, {
+          messages: arrayUnion({
+            text: message,
+            sender: 'customer',
+            timestamp: new Date()
+          }),
+          status: 'open',
+          updatedAt: new Date().toISOString(),
+          lastMessageTime: new Date()
+        });
+        console.log('✅ Message added to existing support thread');
+      } else {
+        await addDoc(supportRef, {
+          customerId: customerId,
+          customerName: 'Customer',
+          messages: [{
+            text: message,
+            sender: 'customer',
+            timestamp: new Date()
+          }],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          lastMessageTime: new Date(),
+          status: 'open'
+        });
+        console.log('✅ New support thread created');
+      }
+    } catch (error) {
+      console.error('❌ Error sending support message to Firestore:', error);
+    }
+  };
+
+  window.loadFirestoreChat = function() {
+    const messagesDiv = document.getElementById('chat-messages');
+    const chat = window.firestoreCurrentChat;
+    
+    if (!chat || !chat.messages) {
+      return;
+    }
+
+    // Clear but keep welcome
+    const welcome = messagesDiv.querySelector('.message.bot');
+    messagesDiv.innerHTML = '';
+    if (welcome) messagesDiv.appendChild(welcome.cloneNode(true));
+
+    // Display all messages
+    chat.messages.forEach(msg => {
+      const msgType = msg.sender === 'customer' ? 'user' : 'bot';
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${msgType}`;
+      messageDiv.textContent = msg.text;
+      messagesDiv.appendChild(messageDiv);
+    });
+
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  };
+
+  // ==================== CUSTOMER FEEDBACK FUNCTIONS ====================
+  window.submitCustomerFeedback = async function() {
+    const ratingSelect = document.getElementById('feedback-rating');
+    const messageInput = document.getElementById('feedback-message');
+    
+    const rating = parseInt(ratingSelect?.value || 0);
+    const message = messageInput?.value.trim() || '';
+
+    if (rating === 0 || !message) {
+      alert('Please provide a rating and message');
+      return;
+    }
+
+    try {
+      const feedbackRef = collection(db, 'feedback');
+      await addDoc(feedbackRef, {
+        customerId: customerId,
+        customerName: 'Customer',
+        rating: rating,
+        message: message,
+        timestamp: new Date(),
+        createdAt: new Date().toISOString()
+      });
+      
+      alert('✅ Thank you for your feedback!');
+      ratingSelect.value = '0';
+      messageInput.value = '';
+      
+      // Hide feedback form
+      const feedbackSection = document.getElementById('feedback-section');
+      if (feedbackSection) {
+        feedbackSection.style.display = 'none';
+      }
+    } catch (error) {
+      console.error('❌ Error submitting feedback:', error);
+      alert('Error submitting feedback');
+    }
+  };
+
+  // Make functions available globally
+  window.firestoreChatSetup = true;
+</script>
+</body>
+
+</html>

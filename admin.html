@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard - Haji's Restaurant</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://upload-widget.cloudinary.com/latest/global/all.js" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --bg: #030303;
+      --panel: rgba(18, 18, 18, 0.94);
+      --border: #d4af37;
+      --text: #fff;
+      --muted: #ddd;
+      --accent: #ffd700;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #010101;
+      color: var(--text);
+    }
+
+    .admin-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 1000;
+    }
+
+    .login-card {
+      width: min(420px, 90vw);
+      background: var(--panel);
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+      padding: 22px;
+    }
+
+    .login-card h1 {
+      margin: 0 0 15px;
+      color: var(--accent);
+      letter-spacing: 1px;
+    }
+
+    .form-group {
+      margin: 10px 0;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #444;
+      background: #111;
+      color: var(--text);
+    }
+
+    .btn {
+      border: 1px solid var(--accent);
+      background: rgba(255, 215, 0, 0.2);
+      color: #101010;
+      font-weight: 700;
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #111;
+    }
+
+    .btn-secondary {
+      background: #303030;
+      color: #fff;
+    }
+
+    .btn-tiny {
+      font-size: 0.78rem;
+      padding: 5px 9px;
+      border-radius: 6px;
+    }
+
+    .timer-adjust-input {
+      background: #111;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 5px 7px;
+    }
+
+    .btn-cancel {
+      background: #c31d1d;
+      border-color: #ff6161;
+      color: #fff;
+    }
+
+    .order-late {
+      border-color: #ff4d4d;
+      animation: pulse-red 1s infinite alternate;
+    }
+
+    .order-late .item-box-title {
+      color: #ff6b6b;
+    }
+
+    .order-on-time {
+      border-color: #22c55e;
+    }
+
+    @keyframes pulse-red {
+      from {
+        box-shadow: 0 0 8px rgba(255, 80, 80, 0.4);
+      }
+
+      to {
+        box-shadow: 0 0 16px rgba(255, 40, 40, 0.8);
+      }
+    }
+
+    .modal {
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.4);
+    }
+
+    .modal-content {
+      background-color: var(--panel);
+      color: var(--text);
+      margin: 10% auto;
+      padding: 20px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      width: 80%;
+      max-width: 600px;
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+    }
+
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .close:hover {
+      color: #fff;
+    }
+
+    #chat-history {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #444;
+      padding: 10px;
+      margin-bottom: 10px;
+      background: #111;
+      border-radius: 8px;
+    }
+
+    #chat-reply-input {
+      width: calc(100% - 80px);
+      padding: 8px;
+      border: 1px solid #444;
+      background: #0c0c0c;
+      color: var(--text);
+      border-radius: 4px;
+    }
+
+    #send-reply {
+      padding: 8px 12px;
+      background: var(--accent);
+      color: #111;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 8px;
+    }
+
+    #admin-dashboard {
+      display: none;
+      padding: 16px 20px 30px;
+      background: #0c0c0c;
+      min-height: 100vh;
+    }
+
+    .nav-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+      border-bottom: 1px solid #333;
+      padding-bottom: 10px;
+    }
+
+    .nav-btn {
+      border: 1px solid #333;
+      background: #111;
+      color: #f4f4f4;
+      border-radius: 8px;
+      padding: 9px 12px;
+      cursor: pointer;
+    }
+
+    .nav-btn.active {
+      background: var(--accent);
+      color: #111;
+      border-color: var(--accent);
+    }
+
+    .section {
+      display: none;
+      background: var(--panel);
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+
+    .section.active {
+      display: block;
+    }
+
+    .flex-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .item-box {
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 10px;
+      background: #111;
+      margin-bottom: 10px;
+    }
+
+    .item-label {
+      color: #bbb;
+      font-size: 0.9rem;
+    }
+
+    .scroll-area {
+      max-height: 450px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+
+    .small-link {
+      color: var(--accent);
+      cursor: pointer;
+    }
+
+    .sec-form input {
+      width: 100%;
+      margin: 8px 0;
+      padding: 9px;
+      border-radius: 8px;
+      background: #0c0c0c;
+      border: 1px solid #444;
+      color: var(--text);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="admin-login" class="admin-overlay">
+    <div class="login-card">
+      <h1>Haji's Admin Login</h1>
+      <div class="form-group"><input id="admin-username" type="text" placeholder="Username" value="Danish" /></div>
+      <div class="form-group"><input id="admin-password" type="password" placeholder="Password" value="Haji123" /></div>
+      <div class="form-group"><button id="loginBtn" class="btn btn-primary" onclick="loginAdmin()">Login</button></div>
+      <p id="admin-error" class="error"></p>
+    </div>
+  </div>
+
+  <section id="admin-dashboard">
+    <div class="nav-bar">
+      <button class="nav-btn" id="nav-orders" onclick="switchTab('orders')">Orders</button>
+      <button class="nav-btn" id="nav-completed" onclick="switchTab('completed')">Completed Orders</button>
+      <button class="nav-btn" id="nav-menu" onclick="switchTab('menu')">Menu Manager</button>
+      <button class="nav-btn" id="nav-add" onclick="switchTab('add')">Add New</button>
+      <button class="nav-btn" id="nav-feedback" onclick="switchTab('feedback')">Customer Feedback</button>
+      <button class="nav-btn" id="nav-reviews" onclick="switchTab('reviews')">Reviews</button>
+      <button class="nav-btn" id="nav-help" onclick="switchTab('help')">Customer Help <span id="help-badge"
+          class="badge" style="display:none;">●</span></button>
+      <button class="nav-btn" id="nav-security" onclick="switchTab('security')">Security</button>
+      <button class="btn btn-secondary" onclick="resetMenu()">Reset Menu</button>
+      <button class="btn btn-secondary" style="margin-left:auto;" onclick="logoutAdmin()">Logout</button>
+    </div>
+
+    <div id="orders-section" class="section">
+      <h2 class="text-3xl font-semibold mb-4">Clover POS Order Board</h2>
+      <div class="grid gap-4 lg:grid-cols-4">
+        <section id="new-orders-column" class="rounded-[28px] bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden">
+          <div class="px-5 py-5 bg-red-600 text-white flex items-center justify-between">
+            <div>
+              <h3 class="text-xl font-semibold">New Orders</h3>
+              <p class="text-sm opacity-90">Incoming orders land here first.</p>
+            </div>
+            <span id="new-orders-count" class="text-3xl font-bold">0</span>
+          </div>
+          <div class="p-5 space-y-4 min-h-[280px]" id="new-orders-list">
+            <p class="text-sm text-slate-300">Waiting for new orders...</p>
+          </div>
+        </section>
+
+        <section id="preparing-orders-column" class="rounded-[28px] bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden">
+          <div class="px-5 py-5 bg-amber-400 text-slate-950 flex items-center justify-between">
+            <div>
+              <h3 class="text-xl font-semibold">Preparing</h3>
+              <p class="text-sm opacity-90">Orders currently being prepared.</p>
+            </div>
+            <span id="preparing-orders-count" class="text-3xl font-bold">0</span>
+          </div>
+          <div class="p-5 space-y-4 min-h-[280px]" id="preparing-orders-list">
+            <p class="text-sm text-slate-400">No orders are preparing right now.</p>
+          </div>
+        </section>
+
+        <section id="ready-orders-column" class="rounded-[28px] bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden">
+          <div class="px-5 py-5 bg-emerald-600 text-white flex items-center justify-between">
+            <div>
+              <h3 class="text-xl font-semibold">Ready</h3>
+              <p class="text-sm opacity-90">Orders ready for handover.</p>
+            </div>
+            <span id="ready-orders-count" class="text-3xl font-bold">0</span>
+          </div>
+          <div class="p-5 space-y-4 min-h-[280px]" id="ready-orders-list">
+            <p class="text-sm text-slate-400">Ready orders appear here.</p>
+          </div>
+        </section>
+
+        <section id="rider-orders-column" class="rounded-[28px] bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden">
+          <div class="px-5 py-5 bg-blue-600 text-white flex items-center justify-between">
+            <div>
+              <h3 class="text-xl font-semibold">Rider / Out</h3>
+              <p class="text-sm opacity-90">Orders out for delivery.</p>
+            </div>
+            <span id="rider-orders-count" class="text-3xl font-bold">0</span>
+          </div>
+          <div class="p-5 space-y-4 min-h-[280px]" id="rider-orders-list">
+            <p class="text-sm text-slate-400">No orders out for delivery yet.</p>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div id="completed-section" class="section">
+      <h2>Completed Orders</h2>
+      <div class="scroll-area" id="completed-orders-list"></div>
+    </div>
+
+    <div id="menu-section" class="section">
+      <h2>Menu Manager</h2>
+      <div class="scroll-area" id="menu-manager"></div>
+    </div>
+
+    <div id="add-section" class="section">
+      <h2>Add New Dish</h2>
+      <div class="form-group"><input id="new-name" type="text" placeholder="Name" /></div>
+      <div class="form-group"><input id="new-price" type="number" min="0" step="0.01" placeholder="Price" /></div>
+      <div class="form-group">
+        <label class="item-label">Image Upload:</label>
+        <button id="upload_widget" class="btn btn-secondary" style="margin-bottom: 10px;">Upload Image to Cloudinary</button>
+        <div id="image-container" style="margin-bottom: 15px;">
+          <img id="uploadedimage" src="" alt="Preview" style="max-width: 100%; height: auto; border-radius: 8px; display: none;">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="item-label" for="new-image">Image URL (auto-filled):</label>
+        <input id="new-image" type="text" placeholder="https://res.cloudinary.com/..." />
+      </div>
+      <div class="form-group"><label class="item-label" for="new-category">Category:</label><select id="new-category">
+          <option value="Starters">Starters</option>
+          <option value="BBQ">BBQ</option>
+          <option value="Meat Curries">Meat Curries</option>
+          <option value="Karahi">Karahi</option>
+          <option value="Biryani">Biryani</option>
+          <option value="Vegan/Veggie Curries">Vegan/Veggie Curries</option>
+          <option value="Pizzas">Pizzas</option>
+          <option value="Burgers">Burgers</option>
+          <option value="Brunch">Brunch</option>
+          <option value="Breads/Rice">Breads/Rice</option>
+          <option value="Drinks">Drinks</option>
+          <option value="Desserts">Desserts</option>
+          <option value="Uncategorized">Uncategorized</option>
+        </select></div>
+      <div class="form-group"><button class="btn btn-primary" onclick="addNewDish()">Add Dish</button></div>
+    </div>
+
+    <div id="security-section" class="section">
+      <h2>Security</h2>
+      <div class="sec-form">
+        <input id="current-password" type="password" placeholder="Current Password" />
+        <input id="new-password" type="password" placeholder="New Password" />
+        <input id="confirm-password" type="password" placeholder="Confirm New Password" />
+        <button class="btn btn-primary" onclick="changePassword()">Update Password</button>
+      </div>
+    </div>
+
+    <div id="feedback-section" class="section">
+      <h2>Customer Feedback</h2>
+      <div class="scroll-area" id="feedback-list">
+        <p style="color: var(--muted);">Loading feedback...</p>
+      </div>
+    </div>
+
+    <div id="reviews-section" class="section">
+      <h2>Customer Reviews & Ratings</h2>
+      <div class="scroll-area" id="reviews-container"></div>
+    </div>
+
+    <div id="help-section" class="section">
+      <h2>Customer Help Messages</h2>
+      <div class="scroll-area" id="help-messages-container"></div>
+    </div>
+  </section>
+
+  <!-- Chat Modal -->
+  <div id="chat-modal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeChatModal()">&times;</span>
+      <h3>Chat with Customer</h3>
+      <div id="chat-history"></div>
+      <div style="display: flex;">
+        <input id="chat-reply-input" placeholder="Type your reply..." onkeypress="if(event.key==='Enter') sendReply()">
+        <button id="send-reply" onclick="sendReply()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="scripts.js" type="module"></script>
+  <script>
+    // Primary auth marker used across admin and order pages
+    const ADMIN_LOGIN_KEY = 'isAdminLoggedIn';
+
+    let currentChatIndex = null;
+
+    function setActiveSection(sectionKey) {
+      const sections = ['orders', 'completed', 'menu', 'add', 'feedback', 'help', 'security'];
+      sections.forEach((key) => {
+        const section = document.getElementById(`${key}-section`);
+        const navBtn = document.getElementById(`nav-${key}`);
+        if (section) section.classList.toggle('active', key === sectionKey);
+        if (navBtn) navBtn.classList.toggle('active', key === sectionKey);
+      });
+    }
+
+    function switchTab(tab) {
+      setActiveSection(tab);
+      if (tab === 'orders') {
+        // Firebase real-time listener (in admin.html module script) handles all orders display
+        // Do NOT call loadOrders() - Firebase listener is the source of truth
+        console.log('📊 Orders tab active - Firebase real-time listener managing display');
+      } else {
+        stopAdminOrdersPolling();
+      }
+      if (tab === 'completed') {
+        console.log('✅ Completed orders tab active - Firebase real-time listener managing display');
+      }
+      if (tab === 'menu') displayMenuManager();
+      if (tab === 'feedback') loadCustomerFeedback();
+      if (tab === 'help') {
+        if (typeof window.displaySupportMessages === 'function' && Array.isArray(window.firestoreSupportMessages)) {
+          window.displaySupportMessages(window.firestoreSupportMessages);
+        } else {
+          renderHelpMessages();
+        }
+        startHelpAutoRefresh();
+      } else {
+        stopHelpAutoRefresh();
+        // If switching away from help tab, ensure Firebase listener is still active for orders
+        if (tab === 'orders') {
+          console.log('✅ Switched to orders - Firebase listener managing display');
+        }
+      }
+    }
+
+    function loginAdmin() {
+      const user = (document.getElementById('admin-username').value || '').trim();
+      const pass = (document.getElementById('admin-password').value || '').trim();
+      const adminError = document.getElementById('admin-error');
+
+      if (user === 'Danish' && pass === 'Haji123') {
+        sessionStorage.setItem('isLoggedIn', 'true');
+        sessionStorage.setItem(ADMIN_LOGIN_KEY, 'true');
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem(ADMIN_LOGIN_KEY);
+        // Clear old localStorage orders to ensure only Firebase data is shown
+        localStorage.removeItem('hajis_orders');
+        localStorage.removeItem('hajis_restaurant_orders');
+        document.getElementById('admin-login').style.display = 'none';
+        document.getElementById('admin-dashboard').style.display = 'block';
+        console.log('✅ Dashboard visible - setting active section to orders');
+        setActiveSection('orders');
+        // Verify orders-section is visible
+        setTimeout(() => {
+          const ordersSection = document.getElementById('orders-section');
+          console.log('📍 Orders-section has active class:', ordersSection?.classList.contains('active'));
+          console.log('📍 Orders-section display:', window.getComputedStyle(ordersSection).display);
+          console.log('📍 Orders-feed element visible:', document.getElementById('orders-feed') !== null);
+        }, 100);
+        displayMenuManager();
+        // IMPORTANT: Do NOT call startAdminOrdersPolling() - Firebase real-time listener handles updates
+        updateHelpBadge();
+        // Render help messages once on login
+        renderHelpMessages();
+        return;
+      }
+
+      adminError.textContent = 'Wrong Password. Use Danish / Haji123';
+      adminError.style.display = 'block';
+    }
+
+    function checkLoginState() {
+      const loggedIn = sessionStorage.getItem('isLoggedIn') === 'true' || sessionStorage.getItem(ADMIN_LOGIN_KEY) === 'true';
+      if (loggedIn) {
+        sessionStorage.setItem(ADMIN_LOGIN_KEY, 'true');
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem(ADMIN_LOGIN_KEY);
+        document.getElementById('admin-login').style.display = 'none';
+        document.getElementById('admin-dashboard').style.display = 'block';
+        console.log('✅ Dashboard visible on page load - setting active section to orders');
+        setActiveSection('orders');
+        // Verify orders-section is visible
+        setTimeout(() => {
+          const ordersSection = document.getElementById('orders-section');
+          console.log('📍 Orders-section has active class:', ordersSection?.classList.contains('active'));
+          console.log('📍 Orders-section display:', window.getComputedStyle(ordersSection).display);
+          console.log('📍 Orders-feed element visible:', document.getElementById('orders-feed') !== null);
+        }, 100);
+        displayMenuManager();
+        // IMPORTANT: Do NOT call startAdminOrdersPolling() - Firebase real-time listener handles updates
+        updateHelpBadge();
+        // Render help messages once on page load
+        renderHelpMessages();
+      } else {
+        sessionStorage.removeItem('isLoggedIn');
+        sessionStorage.removeItem(ADMIN_LOGIN_KEY);
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem(ADMIN_LOGIN_KEY);
+        document.getElementById('admin-login').style.display = 'block';
+        document.getElementById('admin-dashboard').style.display = 'none';
+      }
+    }
+
+    function logoutAdmin() {
+      sessionStorage.removeItem('isLoggedIn');
+      sessionStorage.removeItem(ADMIN_LOGIN_KEY);
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem(ADMIN_LOGIN_KEY);
+      document.getElementById('admin-login').style.display = 'block';
+      document.getElementById('admin-dashboard').style.display = 'none';
+    }
+
+    window.addEventListener('storage', (event) => {
+      // DISABLED: We use Firebase real-time listener instead of localStorage for orders
+      // if (event.key === 'hajis_orders' || event.key === 'hajis_restaurant_orders' || event.key === 'hajis_orders_ts' || event.key === 'hajis_restaurant_orders_ts') {
+      //   loadOrders();
+      // }
+      if (event.key === 'hajis_customer_help') {
+        updateHelpBadge();
+        // Refresh help display if currently on help tab
+        if (document.getElementById('help-section')?.classList.contains('active')) {
+          renderHelpMessages();
+        }
+      }
+    });
+
+    function setupAddNewDishForm() {
+      const fileInput = document.getElementById('new-image-file');
+      const imageField = document.getElementById('new-image');
+      if (!fileInput || !imageField) return;
+
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (file && file.name) {
+          imageField.value = file.name;
+        }
+      });
+    }
+
+    function updateHelpBadge() {
+      const hasFirestorePendingMessages = Array.isArray(window.firestoreSupportMessages) && window.firestoreSupportMessages.some(msg => msg.status === 'pending');
+      if (hasFirestorePendingMessages) {
+        document.getElementById('help-badge').style.display = 'inline';
+        return;
+      }
+      const helpRequests = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+      const unread = helpRequests.some(req => !req.read);
+      document.getElementById('help-badge').style.display = unread ? 'inline' : 'none';
+    }
+
+    function loadHelpRequests() {
+      const helpRequests = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+      const helpList = document.getElementById('help-list');
+      if (!helpList) return;
+      renderHelpMessages();
+    }
+
+    function renderHelpMessages() {
+      const helpList = document.getElementById('help-messages-container');
+      if (!helpList) return;
+
+      if (Array.isArray(window.firestoreSupportMessages) && window.firestoreSupportMessages.length > 0) {
+        const supportMessages = window.firestoreSupportMessages;
+        helpList.innerHTML = supportMessages.map(entry => {
+          const messageText = entry.message || 'No message provided';
+          const adminReply = entry.adminReply || '';
+          return `
+            <div class="item-box">
+              <p><strong>Customer:</strong> ${entry.customerName || 'Guest'}</p>
+              <p><strong>Message:</strong> ${messageText}</p>
+              ${adminReply ? `<p><strong>Admin Reply:</strong> ${adminReply}</p>` : ''}
+              <p style="font-size:0.8rem; color:#888;">${entry.createdAt ? new Date(entry.createdAt).toLocaleString() : 'N/A'}</p>
+            </div>
+          `;
+        }).join('');
+        updateHelpBadge();
+        return;
+      }
+
+      const helpRequests = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+      if (!helpRequests.length) {
+        helpList.innerHTML = '<p style="color: var(--muted);">No help requests yet.</p>';
+        updateHelpBadge();
+        return;
+      }
+      helpList.innerHTML = helpRequests.map((req, index) => `
+        <div class="item-box">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
+            <strong style="color:#fff;">${req.name}</strong>
+            <a href="tel:${req.phone}" style="color:#22c55e;">📞 ${req.phone}</a>
+          </div>
+          <div style="color:#d0d0d0; white-space:pre-wrap;">${req.message}</div>
+          <div style="margin-top:8px; font-size:0.8rem; color:#888;">${new Date(req.timestamp).toLocaleString()}</div>
+          ${req.replies && req.replies.length ? `<div style="margin-top:8px; color:#ffd700;">${req.replies.length} replies</div>` : ''}
+          <button class="btn btn-tiny" style="margin-top:8px;" onclick="openChatModal(${index})">Reply</button>
+        </div>
+      `).join('');
+      helpRequests.forEach(req => req.read = true);
+      localStorage.setItem('hajis_customer_help', JSON.stringify(helpRequests));
+      updateHelpBadge();
+    }
+
+    function openChatModal(index) {
+      currentChatIndex = index;
+      const messages = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+      const msg = messages[index];
+      document.querySelector('#chat-modal h3').textContent = `Chat with ${msg.name}`;
+      displayChatHistory(index);
+      document.getElementById('chat-modal').style.display = 'block';
+    }
+
+    function closeChatModal() {
+      document.getElementById('chat-modal').style.display = 'none';
+      currentChatIndex = null;
+    }
+
+    function displayChatHistory(index) {
+      const messages = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+      const msg = messages[index];
+      if (!msg) return;
+      let html = `<div style="margin-bottom:10px; padding:8px; background:#222; border-radius:4px;"><strong>${msg.name}</strong> (${msg.phone}): ${msg.message}<br><small style="color:#888;">${new Date(msg.timestamp).toLocaleString()}</small></div>`;
+      if (msg.replies && msg.replies.length) {
+        msg.replies.forEach(reply => {
+          html += `<div style="margin-bottom:10px; padding:8px; background:#333; border-radius:4px; margin-left:20px;"><strong>Admin</strong>: ${reply.message}<br><small style="color:#888;">${new Date(reply.timestamp).toLocaleString()}</small></div>`;
+        });
+      }
+      document.getElementById('chat-history').innerHTML = html;
+      // Scroll to bottom
+      const history = document.getElementById('chat-history');
+      history.scrollTop = history.scrollHeight;
+    }
+
+    function sendReply() {
+      const input = document.getElementById('chat-reply-input');
+      const message = input.value.trim();
+      if (!message || currentChatIndex === null) return;
+      const messages = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
+      if (!messages[currentChatIndex]) return;
+      if (!messages[currentChatIndex].replies) messages[currentChatIndex].replies = [];
+      messages[currentChatIndex].replies.push({
+        message: message,
+        timestamp: new Date().toISOString()
+      });
+      localStorage.setItem('hajis_customer_help', JSON.stringify(messages));
+      input.value = '';
+      displayChatHistory(currentChatIndex);
+      // Dispatch event for real-time updates
+      window.dispatchEvent(new StorageEvent('storage', { key: 'hajis_customer_help' }));
+    }
+
+    window.clearAllHistory = function () {
+      if (confirm('Are you sure you want to clear all history?')) {
+        localStorage.removeItem('hajis_orders');
+        localStorage.removeItem('hajis_customer_help');
+        location.reload();
+      }
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      checkLoginState();
+      setupAddNewDishForm();
+    });
+  </script>
+  <script type="module">
+    import {
+      db,
+      collection,
+      onSnapshot,
+      query,
+      where,
+      orderBy,
+      updateDoc,
+      doc,
+      getDoc
+    } from './firebase-config.js';
+
+    const ORDERS_COLLECTION = 'orders';
+    const ordersCollection = collection(db, ORDERS_COLLECTION);
+    const ordersQuery = query(ordersCollection, orderBy('timestamp', 'desc'));
+    const newOrdersQuery = query(ordersCollection, where('status', '==', 'new'), orderBy('timestamp', 'desc'));
+    window.lastNewOrderIds = new Set();
+
+    console.log('🚀 Admin Dashboard - Firestore Orders Board Initialized');
+
+    onSnapshot(newOrdersQuery, (snapshot) => {
+      const newOrders = [];
+      snapshot.forEach((docSnap) => {
+        newOrders.push({ id: docSnap.id, ...docSnap.data() });
+      });
+
+      newOrders.sort((a, b) => {
+        const aTime = new Date(a.createdAt || a.timestamp || 0).getTime();
+        const bTime = new Date(b.createdAt || b.timestamp || 0).getTime();
+        return bTime - aTime;
+      });
+
+      updateColumn('new-orders-list', newOrders, 'No new orders yet. Waiting for customers.', 'new');
+      const ordersFeed = document.getElementById('orders-feed');
+      if (ordersFeed) ordersFeed.style.display = 'block';
+      console.log('Success: Data received from Firestore', snapshot.docs.length);
+      document.getElementById('new-orders-count').textContent = newOrders.length;
+
+      const currentNewIds = new Set(newOrders.map((order) => order.id));
+      const addedOrderIds = [...currentNewIds].filter((id) => !window.lastNewOrderIds.has(id));
+      if (window.lastNewOrderIds.size > 0 && addedOrderIds.length > 0) {
+        playNewOrderPing();
+        const newOrder = newOrders.find((o) => o.id === addedOrderIds[0]);
+        if (newOrder) {
+          alert(`🔔 NEW ORDER!\n\nCustomer: ${newOrder.customerName}\nOrder ID: ${newOrder.id}\n\nPlease check the Red column!`);
+        }
+      }
+      window.lastNewOrderIds = currentNewIds;
+    }, (error) => {
+      console.error('❌ Firestore new orders listener error:', error);
+      const newList = document.getElementById('new-orders-list');
+      if (newList) {
+        newList.innerHTML = `<div class="rounded-3xl bg-slate-950/90 p-4 border border-red-500 text-red-300">Unable to load new orders. ${error?.message || ''}</div>`;
+      }
+    });
+
+    onSnapshot(ordersQuery, (snapshot) => {
+      const orders = [];
+      snapshot.forEach((docSnap) => {
+        const orderData = docSnap.data();
+        orders.push({ id: docSnap.id, ...orderData });
+      });
+
+      orders.sort((a, b) => {
+        const aTime = new Date(a.createdAt || a.timestamp || 0).getTime();
+        const bTime = new Date(b.createdAt || b.timestamp || 0).getTime();
+        return bTime - aTime;
+      });
+
+      window.hajisLoadedOrders = orders;
+      renderBoardOrders(orders);
+      renderCompletedOrdersFeed(orders);
+    }, (error) => {
+      console.error('❌ Firestore orders listener error:', error);
+      const newList = document.getElementById('new-orders-list');
+      if (newList) {
+        newList.innerHTML = `<div class="rounded-3xl bg-slate-950/90 p-4 border border-red-500 text-red-300">Unable to load live orders. ${error?.message || ''}</div>`;
+      }
+    });
+
+    function renderBoardOrders(orders) {
+      const ordersFeed = document.getElementById('orders-feed');
+      if (ordersFeed) ordersFeed.style.display = 'block';
+      const preparingOrders = orders.filter((order) => {
+        const status = String(order.status || '').toLowerCase();
+        return status === 'preparing' || status === 'accepted' || status === 'in process';
+      });
+      const readyOrders = orders.filter((order) => {
+        const status = String(order.status || '').toLowerCase();
+        return status === 'ready';
+      });
+      const riderOrders = orders.filter((order) => {
+        const status = String(order.status || '').toLowerCase();
+        return status === 'dispatched';
+      });
+
+      updateColumn('preparing-orders-list', preparingOrders, 'No orders are preparing right now.', 'preparing');
+      updateColumn('ready-orders-list', readyOrders, 'Ready orders appear here.', 'ready');
+      updateColumn('rider-orders-list', riderOrders, 'No orders out for delivery yet.', 'rider');
+
+      document.getElementById('preparing-orders-count').textContent = preparingOrders.length;
+      document.getElementById('ready-orders-count').textContent = readyOrders.length;
+      document.getElementById('rider-orders-count').textContent = riderOrders.length;
+    }
+
+    function updateColumn(containerId, orders, emptyLabel, columnType) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+
+      if (!orders.length) {
+        container.innerHTML = `<p class="text-sm text-slate-400">${emptyLabel}</p>`;
+        return;
+      }
+
+      container.innerHTML = orders.map((order) => renderOrderCard(order, columnType)).join('');
+    }
+
+    function renderOrderCard(order, columnType) {
+      const timeLabel = getTimeElapsed(order.createdAt || order.timestamp);
+      const notes = order.notes || order.customerNotes || order.specialInstructions || 'No notes';
+      const items = Array.isArray(order.items) ? order.items : [];
+      const itemsHtml = items.length
+        ? items.map((item) => `<li class="leading-6 text-slate-600">${item.quantity || 1}× ${item.name}</li>`).join('')
+        : '<li class="leading-6 text-slate-600">No items listed</li>';
+      const totalPrice = formatCurrency(order.totalAmount || order.total || order.totalPrice || 0);
+      const prepTimeMinutes = (() => {
+        if (order.prepTimeMinutes != null) return Number(order.prepTimeMinutes);
+        if (order.estimatedDeliveryMinutes != null) return Number(order.estimatedDeliveryMinutes);
+        if (typeof order.estimatedDeliveryTime === 'number') return Number(order.estimatedDeliveryTime);
+        if (order.estimatedDeliveryTime) {
+          const endTime = order.estimatedDeliveryTime.toDate ? order.estimatedDeliveryTime.toDate() : new Date(order.estimatedDeliveryTime);
+          return Math.max(0, Math.ceil((endTime - new Date()) / 60000));
+        }
+        return 20;
+      })();
+      const orderStatus = String(order.status || 'new').toLowerCase();
+      const isNew = columnType === 'new';
+      const isPreparing = columnType === 'preparing';
+      const isReady = columnType === 'ready';
+      const isRider = columnType === 'rider';
+
+      const actionButtons = [];
+      if (isNew) {
+        actionButtons.push(`<button class="rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400 transition" onclick="window.startOrder('${order.id}')">Start</button>`);
+      }
+      if (isPreparing) {
+        actionButtons.push(`<button class="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-400 transition" onclick="window.moveOrder('${order.id}','ready')">Finish</button>`);
+      }
+      if (isReady) {
+        actionButtons.push(`<button class="rounded-full bg-blue-500 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-400 transition" onclick="window.handOverToRider('${order.id}')">Hand Over to Rider</button>`);
+      }
+      if (isRider) {
+        actionButtons.push(`<button class="rounded-full bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-500 transition" onclick="window.moveOrder('${order.id}','completed')">Delivered</button>`);
+      }
+      actionButtons.push(`<button class="rounded-full bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-700 transition" onclick="window.moveOrder('${order.id}','cancelled')">Cancel</button>`);
+
+      return `
+        <article class="rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+          <div class="px-6 py-5 bg-slate-950 text-white flex items-center justify-between gap-3">
+            <div>
+              <p class="text-sm uppercase tracking-[0.25em] text-slate-400">#${order.id}</p>
+              <h4 class="text-lg font-semibold">${order.customerName || 'Guest'}</h4>
+            </div>
+            <span class="text-sm text-slate-300">${timeLabel}</span>
+          </div>
+          <div class="p-6 space-y-4">
+            <div class="rounded-3xl bg-slate-50 border border-slate-200 p-4">
+              <p class="text-sm font-semibold text-slate-700">Items</p>
+              <ul class="mt-3 space-y-2 text-sm">${itemsHtml}</ul>
+            </div>
+            <div class="rounded-3xl bg-slate-50 border border-slate-200 p-4 text-sm text-slate-600">
+              <p class="font-semibold text-slate-800">Customer Notes</p>
+              <p class="mt-2 leading-6 text-slate-600">${notes}</p>
+            </div>
+          </div>
+          <div class="px-6 py-5 bg-slate-50 border-t border-slate-200 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p class="text-sm uppercase tracking-[0.2em] text-slate-500">Total</p>
+              <p class="text-xl font-semibold text-slate-900">${totalPrice}</p>
+              ${(isNew || isPreparing) && orderStatus !== 'dispatched' ? `
+              <div class="mt-3">
+                <p class="text-sm uppercase tracking-[0.2em] text-slate-500">Prep Time</p>
+                <div class="flex items-center gap-2 mt-1">
+                  <button class="rounded-full bg-slate-600 px-3 py-1 text-sm font-semibold text-white hover:bg-slate-500 transition" onclick="window.adjustPrepTime('${order.id}', -5)">-</button>
+                  <span id="prep-time-${order.id}" class="text-lg font-semibold text-slate-900">${prepTimeMinutes}</span>
+                  <button class="rounded-full bg-slate-600 px-3 py-1 text-sm font-semibold text-white hover:bg-slate-500 transition" onclick="window.adjustPrepTime('${order.id}', 5)">+</button>
+                </div>
+              </div>
+              ` : ''}
+              ${isReady ? `
+              <div class="mt-3">
+                <p class="text-sm uppercase tracking-[0.2em] text-slate-500">Assign Rider</p>
+                <input id="rider-name-${order.id}" type="text" placeholder="Enter rider name..." style="width:100%; padding:8px; margin-top:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;" value="${order.riderName || ''}" />
+              </div>
+              ` : ``}
+            </div>
+            <div class="flex flex-wrap items-center gap-2">${actionButtons.join('')}</div>
+          </div>
+        </article>
+      `;
+    }
+
+    function getTimeElapsed(value) {
+      if (!value) return 'Just now';
+      const timestamp = new Date(value).getTime();
+      if (!timestamp || Number.isNaN(timestamp)) return 'Unknown time';
+
+      const diffMs = Date.now() - timestamp;
+      const minutes = Math.floor(diffMs / 60000);
+      if (minutes < 1) return 'Just now';
+      if (minutes === 1) return '1 min ago';
+      if (minutes < 60) return `${minutes} mins ago`;
+      const hours = Math.floor(minutes / 60);
+      if (hours === 1) return '1 hour ago';
+      return `${hours} hrs ago`;
+    }
+
+    function formatCurrency(amount) {
+      return `$${Number(amount || 0).toFixed(2)}`;
+    }
+
+    function playNewOrderPing() {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+
+        const ctx = new AudioContext();
+
+        // Create a double-beep sound for new order (Clover-style buzzer)
+        for (let beep = 0; beep < 2; beep++) {
+          const oscillator = ctx.createOscillator();
+          const gain = ctx.createGain();
+          oscillator.type = 'sine';
+          oscillator.frequency.value = 800 + (beep * 200);
+          oscillator.connect(gain);
+          gain.connect(ctx.destination);
+
+          const startTime = ctx.currentTime + (beep * 0.35);
+          gain.gain.setValueAtTime(0.001, startTime);
+          gain.gain.exponentialRampToValueAtTime(0.25, startTime + 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.25);
+
+          oscillator.start(startTime);
+          oscillator.stop(startTime + 0.25);
+        }
+
+        setTimeout(() => {
+          if (ctx.state !== 'closed') ctx.close();
+        }, 800);
+      } catch (err) {
+        console.warn('Order ping unavailable', err);
+      }
+    }
+
+    window.startOrder = async function (orderId) {
+      if (!orderId) return;
+
+      try {
+        const orderRef = doc(db, ORDERS_COLLECTION, orderId);
+        const orderDoc = await getDoc(orderRef);
+        if (!orderDoc.exists()) return;
+
+        const orderData = orderDoc.data();
+        const currentPrepMinutes = (() => {
+          if (orderData.prepTimeMinutes != null) return Number(orderData.prepTimeMinutes);
+          if (orderData.estimatedDeliveryMinutes != null) return Number(orderData.estimatedDeliveryMinutes);
+          if (typeof orderData.estimatedDeliveryTime === 'number') return Number(orderData.estimatedDeliveryTime);
+          if (orderData.estimatedDeliveryTime) {
+            const previousEnd = orderData.estimatedDeliveryTime.toDate ? orderData.estimatedDeliveryTime.toDate() : new Date(orderData.estimatedDeliveryTime);
+            return Math.max(0, Math.ceil((previousEnd - new Date()) / 60000));
+          }
+          return 20;
+        })();
+        const prepMinutes = Math.max(5, Math.min(120, currentPrepMinutes));
+        const estimatedDeliveryTime = new Date(Date.now() + prepMinutes * 60000).toISOString();
+
+        await updateDoc(orderRef, {
+          status: 'preparing',
+          startedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          prepTimeMinutes: prepMinutes,
+          estimatedDeliveryTime
+        });
+      } catch (err) {
+        console.error('❌ Failed to start order:', err);
+        alert('Unable to start order. Try again.');
+      }
+    };
+
+    window.moveOrder = async function (orderId, nextStatus) {
+      if (!orderId || !nextStatus) return;
+
+      try {
+        const updatePayload = {
+          status: nextStatus,
+          updatedAt: new Date().toISOString()
+        };
+        if (nextStatus === 'preparing') {
+          updatePayload.startedAt = new Date().toISOString();
+        }
+        if (nextStatus === 'ready' || nextStatus === 'completed' || nextStatus === 'dispatched') {
+          updatePayload.readyAt = new Date().toISOString();
+        }
+        if (nextStatus === 'dispatched') {
+          updatePayload.dispatchedAt = new Date().toISOString();
+        }
+        await updateDoc(doc(db, ORDERS_COLLECTION, orderId), updatePayload);
+      } catch (err) {
+        console.error('❌ Failed to update order status:', err);
+        alert('Unable to move order. Try again.');
+      }
+    };
+
+    window.handOverToRider = async function (orderId) {
+      if (!orderId) return;
+      
+      const riderNameInput = document.getElementById(`rider-name-${orderId}`);
+      if (!riderNameInput) {
+        alert('Rider name field not found.');
+        return;
+      }
+      
+      const riderName = riderNameInput.value.trim();
+      if (!riderName) {
+        alert('Please enter a rider name before handing over.');
+        return;
+      }
+
+      try {
+        const updatePayload = {
+          status: 'dispatched',
+          riderName: riderName,
+          dispatchedAt: new Date().toISOString(),
+          readyAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        await updateDoc(doc(db, ORDERS_COLLECTION, orderId), updatePayload);
+        console.log('✅ Order handed over to rider:', riderName);
+      } catch (err) {
+        console.error('❌ Failed to hand over order:', err);
+        alert('Unable to hand over order. Try again.');
+      }
+    };
+
+    window.adjustPrepTime = async function (orderId, delta) {
+      if (!orderId) return;
+
+      try {
+        const orderRef = doc(db, ORDERS_COLLECTION, orderId);
+        const orderDoc = await getDoc(orderRef);
+        if (!orderDoc.exists()) return;
+
+        const orderData = orderDoc.data();
+        const currentMinutes = (() => {
+          if (orderData.prepTimeMinutes != null) return Number(orderData.prepTimeMinutes);
+          if (orderData.estimatedDeliveryMinutes != null) return Number(orderData.estimatedDeliveryMinutes);
+          if (typeof orderData.estimatedDeliveryTime === 'number') return Number(orderData.estimatedDeliveryTime);
+          if (orderData.estimatedDeliveryTime) {
+            const previousEnd = orderData.estimatedDeliveryTime.toDate ? orderData.estimatedDeliveryTime.toDate() : new Date(orderData.estimatedDeliveryTime);
+            return Math.max(0, Math.ceil((previousEnd - new Date()) / 60000));
+          }
+          return 20;
+        })();
+        const newMinutes = Math.max(5, Math.min(120, currentMinutes + delta)); // Min 5, max 120 mins
+        const updatePayload = {
+          prepTimeMinutes: newMinutes,
+          updatedAt: new Date().toISOString()
+        };
+
+        if (String(orderData.status || '').toLowerCase() === 'preparing') {
+          updatePayload.estimatedDeliveryTime = new Date(Date.now() + newMinutes * 60000).toISOString();
+        }
+
+        await updateDoc(orderRef, updatePayload);
+
+        const displayEl = document.getElementById(`prep-time-${orderId}`);
+        if (displayEl) displayEl.textContent = newMinutes;
+      } catch (err) {
+        console.error('❌ Failed to adjust prep time:', err);
+        alert('Unable to adjust prep time. Try again.');
+      }
+    };
+
+    function renderCompletedOrdersFeed(orders) {
+      const feed = document.getElementById('completed-orders-list');
+      if (!feed) return;
+
+      const completed = orders.filter((order) => {
+        const status = String(order.status || '').toLowerCase();
+        return status === 'completed' || status === 'cancelled';
+      });
+
+      if (!completed.length) {
+        feed.innerHTML = '<p style="color:#ccc; padding:10px;">⏳ No completed or cancelled orders history yet.</p>';
+        return;
+      }
+
+      feed.innerHTML = completed.map((order) => {
+        const status = String(order.status || 'completed').toLowerCase();
+        const items = Array.isArray(order.items) ? order.items : [];
+        const total = formatCurrency(order.totalAmount || order.total || order.totalPrice || 0);
+        const completedAt = order.updatedAt || order.readyAt || order.createdAt;
+
+        return `
+          <div class="rounded-3xl bg-slate-950 border border-slate-800 p-4 text-slate-100">
+            <div class="flex items-center justify-between gap-3 mb-3">
+              <div>
+                <p class="text-sm text-slate-400">Order #${order.id}</p>
+                <p class="font-semibold text-lg">${order.customerName || 'Guest'}</p>
+              </div>
+              <span class="rounded-full bg-slate-800 px-3 py-1 text-sm">${status.toUpperCase()}</span>
+            </div>
+            <div class="text-sm text-slate-300 mb-3">${items.map((item) => `${item.quantity || 1}× ${item.name}`).join(', ') || 'No items'}</div>
+            <div class="flex items-center justify-between text-sm text-slate-400">
+              <span>${completedAt ? new Date(completedAt).toLocaleString() : 'Unknown time'}</span>
+              <span class="font-semibold text-slate-100">${total}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  </script>
+
+  <!-- Firestore Listeners Module -->
+  <script type="module">
+    import { 
+      db, collection, onSnapshot, query, orderBy, updateDoc, doc 
+    } from './firebase-config.js';
+
+    // ==================== FIRESTORE PRODUCTS LISTENER ====================
+    const productsRef = collection(db, 'hajis_menu');
+    const productsQuery = query(productsRef, orderBy('timestamp', 'desc'));
+
+    onSnapshot(productsQuery, (snapshot) => {
+      console.log('📡 Real-time update from Firestore hajis_menu collection');
+      const products = [];
+      snapshot.forEach(docSnapshot => {
+        products.push({ id: docSnapshot.id, ...docSnapshot.data() });
+      });
+      window.firestoreProducts = products;
+      // Auto-refresh menu manager if it's active
+      if (document.getElementById('menu-section')?.classList.contains('active')) {
+        if (typeof window.displayMenuManagerUI === 'function') {
+          window.displayMenuManagerUI(products, document.getElementById('menu-manager'));
+        }
+      }
+    }, (error) => {
+      console.error('❌ Error in Firestore hajis_menu listener:', error);
+    });
+
+    // ==================== FIRESTORE ACTIVE ORDERS LISTENER ====================
+    const activeOrdersRef = collection(db, 'active_orders');
+    const activeOrdersQuery = query(activeOrdersRef, orderBy('timestamp', 'desc'));
+
+    onSnapshot(activeOrdersQuery, (snapshot) => {
+      console.log('📡 New order from Firestore active_orders collection');
+      const orders = [];
+      snapshot.forEach(docSnapshot => {
+        orders.push({ id: docSnapshot.id, ...docSnapshot.data() });
+      });
+      window.firestoreActiveOrders = orders;
+      
+      // Display active orders if on orders tab
+      if (document.getElementById('orders-section')?.classList.contains('active')) {
+        updateActiveOrdersDisplay(orders);
+      }
+      
+      // Play audio alert if there are new orders
+      if (orders.length > 0) {
+        playOrderAlert();
+      }
+    }, (error) => {
+      console.error('❌ Error in Firestore active_orders listener:', error);
+    });
+
+    // ==================== FIRESTORE FEEDBACK LISTENER ====================
+    const feedbackRef = collection(db, 'feedback');
+    const feedbackQuery = query(feedbackRef, orderBy('timestamp', 'desc'));
+
+    onSnapshot(feedbackQuery, (snapshot) => {
+      console.log('📡 New feedback from Firestore feedback collection');
+      const feedbackItems = [];
+      snapshot.forEach(docSnapshot => {
+        feedbackItems.push({ id: docSnapshot.id, ...docSnapshot.data() });
+      });
+      window.firestoreFeedback = feedbackItems;
+      
+      // Display feedback if on feedback tab
+      if (document.getElementById('feedback-section')?.classList.contains('active')) {
+        displayFirestoreFeedback(feedbackItems);
+      }
+      
+      // Play alert if new feedback
+      if (feedbackItems.length > 0) {
+        playFeedbackAlert();
+      }
+    }, (error) => {
+      console.error('❌ Error in Firestore feedback listener:', error);
+    });
+
+    // ==================== FIRESTORE SUPPORT MESSAGES LISTENER ====================
+    const supportMessagesRef = collection(db, 'support_messages');
+    const supportMessagesQuery = query(supportMessagesRef, orderBy('createdAt', 'desc'));
+
+    onSnapshot(supportMessagesQuery, (snapshot) => {
+      console.log('📡 New support message from Firestore support_messages collection');
+      const messages = [];
+      snapshot.forEach(docSnapshot => {
+        messages.push({ id: docSnapshot.id, ...docSnapshot.data() });
+      });
+      window.firestoreSupportMessages = messages;
+      
+      // Display support messages if on help tab
+      if (document.getElementById('help-section')?.classList.contains('active')) {
+        displaySupportMessages(messages);
+      }
+    }, (error) => {
+      console.error('❌ Error in Firestore support_messages listener:', error);
+    });
+
+    // ==================== HELPER FUNCTIONS ====================
+    function updateActiveOrdersDisplay(orders) {
+      const feed = document.getElementById('orders-feed');
+      if (!feed) return;
+
+      if (!orders || orders.length === 0) {
+        feed.innerHTML = '<p style="color:#ccc; padding:10px;">⏳ No pending orders. Orders will appear here instantly.</p>';
+        return;
+      }
+
+      feed.innerHTML = orders.map(order => {
+        const status = (order.status || 'pending').toLowerCase();
+        const items = Array.isArray(order.items) ? order.items : [];
+        const itemsHTML = items.map(item =>
+          `<div style="color:#d0d0d0; font-size:0.9rem;">• ${item.name} x${item.quantity || 1}</div>`
+        ).join('');
+
+        let borderColor = '#ffa500';
+        let textColor = '#ffa500';
+        if (status === 'in process' || status === 'accepted') {
+          borderColor = '#22c55e';
+          textColor = '#22c55e';
+        }
+
+        return `
+          <div class="item-box" style="border-color: ${borderColor};">
+            <div class="item-box-title">
+              <strong>${order.customerName || 'Customer'}</strong>
+              <span style="color: ${textColor}; font-weight:bold;">
+                ${status.toUpperCase()}
+              </span>
+            </div>
+            <div style="margin:8px 0; font-size:0.9rem; color:#aaa;">
+              📱 ${order.phone || 'N/A'}<br/>
+              📍 ${order.address || 'N/A'}
+            </div>
+            <div style="margin:8px 0; color:#ccc;">
+              <strong>Items:</strong>
+              ${itemsHTML}
+              <strong>Total:</strong> $${(order.totalAmount || order.total || 0).toFixed(2)}
+            </div>
+            <div style="margin:8px 0; font-size:0.85rem; color:#888;">
+              ${new Date(order.timestamp).toLocaleString()}
+            </div>
+            <button class="btn btn-primary btn-tiny" onclick="window.acceptFirestoreOrder('${order.id}')">Accept</button>
+            <button class="btn btn-cancel btn-tiny" onclick="window.cancelFirestoreOrder('${order.id}')">Cancel</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function displayFirestoreFeedback(feedbackItems) {
+      const container = document.getElementById('feedback-list');
+      if (!container) return;
+
+      if (!feedbackItems || feedbackItems.length === 0) {
+        container.innerHTML = '<p style="color: var(--muted);">No feedback yet.</p>';
+        return;
+      }
+
+      container.innerHTML = feedbackItems.map(feedback => {
+        const stars = '⭐'.repeat(feedback.rating || 0);
+        const emptyStars = '☆'.repeat(5 - (feedback.rating || 0));
+        const feedbackTime = feedback.timestamp ? new Date(feedback.timestamp).toLocaleString() : 'N/A';
+
+        return `
+          <div class="item-box" style="border-color: #d4af37;">
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+              <div style="font-size: 1.2rem; letter-spacing: 2px;">${stars}${emptyStars}</div>
+              <div style="font-size: 0.85rem; color: #999;">${feedbackTime}</div>
+            </div>
+            <div style="color:#d0d0d0; white-space:pre-wrap; margin-bottom:12px; line-height: 1.6;">${feedback.message || 'No message'}</div>
+            <div style="font-size: 0.8rem; color: #666; padding-top: 8px; border-top: 1px solid #333;">
+              Customer ID: ${feedback.customerId || 'N/A'}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function displaySupportMessages(messages) {
+      const container = document.getElementById('help-messages-container');
+      if (!container) return;
+
+      if (!messages || messages.length === 0) {
+        container.innerHTML = '<p style="color: var(--muted);">No support messages yet.</p>';
+        return;
+      }
+
+      container.innerHTML = messages.map(entry => {
+        const messagesArray = Array.isArray(entry.messages) ? entry.messages : [];
+        const customerMessages = messagesArray.filter(msg => msg.sender === 'customer');
+        const adminMessages = messagesArray.filter(msg => msg.sender === 'admin');
+        const lastCustomerMessage = customerMessages.length ? customerMessages[customerMessages.length - 1].text : 'No customer message';
+        const createdAt = entry.createdAt ? new Date(entry.createdAt).toLocaleString() : 'N/A';
+
+        return `
+          <div class="item-box">
+            <p><strong>Customer:</strong> ${entry.customerName || 'Guest'}</p>
+            <p><strong>Last Customer Message:</strong> ${lastCustomerMessage}</p>
+            ${adminMessages.length ? `<p><strong>Admin Reply:</strong> ${adminMessages[adminMessages.length - 1].text}</p>` : ''}
+            <p><strong>Status:</strong> ${entry.status || 'pending'}</p>
+            <p style="font-size:0.8rem; color:#888;">${createdAt}</p>
+          </div>
+        `;
+      }).join('');
+    }
+
+    window.displayFirestoreFeedback = displayFirestoreFeedback;
+    window.displaySupportMessages = displaySupportMessages;
+
+    function playOrderAlert() {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 1000;
+      gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    }
+
+    function playFeedbackAlert() {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800;
+      gain.gain.setValueAtTime(0.2, audioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    }
+
+    window.acceptFirestoreOrder = function(orderId) {
+      if (!orderId) return;
+      updateDoc(doc(db, 'active_orders', orderId), {
+        status: 'accepted',
+        acceptedAt: new Date()
+      }).then(() => {
+        if (typeof window.showNotification === 'function') {
+          window.showNotification('Order Accepted!', 'success');
+        }
+      }).catch(err => {
+        console.error('Error accepting order:', err);
+        alert('Error accepting order');
+      });
+    };
+
+    window.cancelFirestoreOrder = function(orderId) {
+      if (!orderId) return;
+      updateDoc(doc(db, 'active_orders', orderId), {
+        status: 'cancelled',
+        cancelledAt: new Date()
+      }).then(() => {
+        if (typeof window.showNotification === 'function') {
+          window.showNotification('Order Cancelled!', 'success');
+        }
+      }).catch(err => {
+        console.error('Error cancelling order:', err);
+        alert('Error cancelling order');
+      });
+    };
+
+    window.openChatWithCustomer = function(chatId) {
+      alert('Chat feature coming soon for chat ID: ' + chatId);
+    };
+  </script>
+
+</body>
+
+</html>

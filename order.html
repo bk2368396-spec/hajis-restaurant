@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Online - Haji's Restaurant</title>
+  <link rel="stylesheet" href="style.css">
+  <meta name="description" content="Place your order online at Haji's Restaurant with delivery details and payment options.">
+  <meta name="keywords" content="order online, delivery, Haji's Restaurant, checkout">
+  <meta property="og:title" content="Order Online - Haji's Restaurant" />
+  <meta property="og:description" content="Checkout easily with your cart and delivery details for fast service." />
+  <meta property="og:url" content="https://hajisrestaurant.pages.dev/order.html" />
+  <link rel="canonical" href="https://hajisrestaurant.pages.dev/order.html" />
+  <script type="application/ld+json">{
+    "@context":"https://schema.org",
+    "@type":"OrderAction",
+    "target":"https://hajisrestaurant.pages.dev/order.html",
+    "actionStatus":"PotentialActionStatus"
+  }</script>
+  <script src="scripts.js" type="module"></script>
+  <script type="module">
+    import { 
+      database, 
+      db,
+      ref, 
+      set, 
+      onValue, 
+      push, 
+      update, 
+      remove, 
+      get,
+      collection,
+      addDoc,
+      doc,
+      updateDoc,
+      query,
+      where,
+      orderBy,
+      onSnapshot,
+      serverTimestamp
+    } from './firebase-config.js';
+
+    // Store current order ID and Firebase listener reference
+    let currentOrderIdFirebase = null;
+    let orderListenerUnsubscribe = null;
+    let lastDeliveryMinutes = null;
+
+    function getCart() {
+      try {
+        return JSON.parse(localStorage.getItem('cart') || '[]');
+      } catch (e) {
+        console.warn('Error parsing cart', e);
+        return [];
+      }
+    }
+
+    function loadCart() {
+      const cart = getCart();
+      const emptyCart = document.getElementById('empty-cart');
+      const cartContainer = document.getElementById('cart-container');
+      const orderFormSection = document.querySelector('.form-card').parentElement;
+      const cartTableBody = document.getElementById('cart-table-body');
+      const cartTotal = document.getElementById('cart-total');
+
+      // Removed Firebase sync check
+
+      if (cart.length === 0) {
+        emptyCart.innerHTML = '<h2>Your cart is empty</h2><p>Looks like you haven\'t added any items to your cart yet.</p><a href="menu.html" class="btn btn-primary" style="margin-top:20px;display:inline-block;">Browse Menu</a>';
+        emptyCart.style.display = 'block';
+        cartContainer.style.display = 'none';
+        orderFormSection.style.display = 'none';
+        return;
+      }
+
+      emptyCart.style.display = 'none';
+      cartContainer.style.display = 'block';
+      orderFormSection.style.display = 'block';
+
+      cartTableBody.innerHTML = '';
+      let total = 0;
+
+      cart.forEach(item => {
+        const quantity = item.quantity || 1;
+        const itemTotal = item.price * quantity;
+        total += itemTotal;
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td style="padding:6px">${item.name}</td>
+          <td style="text-align:right;padding:6px">$${item.price.toFixed(2)}</td>
+          <td style="text-align:center;padding:6px">
+            <input type="number" min="1" value="${quantity}" onchange="updateQuantity(${item.id}, this.value)" style="width:50px;text-align:center;">
+          </td>
+          <td style="text-align:right;padding:6px">$${itemTotal.toFixed(2)}</td>
+          <td style="text-align:center;padding:6px">
+            <button onclick="removeFromCart(${item.id})" style="background:none;border:none;color:#ff6b6b;cursor:pointer;">✕</button>
+          </td>
+        `;
+        cartTableBody.appendChild(row);
+      });
+
+      cartTotal.textContent = `$${total.toFixed(2)}`;
+    }
+
+    function setFieldInvalid(field, messageId, message) {
+      field.style.border = '1px solid #ff4d4d';
+      const errorSpan = document.getElementById(messageId);
+      if (errorSpan) {
+        errorSpan.textContent = message;
+        errorSpan.style.display = 'block';
+      }
+    }
+
+    function clearFieldValidation(field, messageId) {
+      field.style.border = '';
+      const errorSpan = document.getElementById(messageId);
+      if (errorSpan) {
+        errorSpan.style.display = 'none';
+      }
+    }
+
+    window.placeOrder = async function placeOrder() {
+      console.log('1. [placeOrder] Button clicked.');
+      const nameField = document.getElementById('customer-name');
+      const phoneField = document.getElementById('customer-phone');
+      const addressField = document.getElementById('customer-address');
+      const name = nameField.value.trim();
+      const phone = phoneField.value.trim();
+      const address = addressField.value.trim();
+      const errorElement = document.getElementById('order-error');
+
+      errorElement.style.display = 'none';
+      clearFieldValidation(nameField, 'customer-name-error');
+      clearFieldValidation(phoneField, 'customer-phone-error');
+      clearFieldValidation(addressField, 'customer-address-error');
+
+      let valid = true;
+
+      if (name.length < 3 || /\d/.test(name) || !/[A-Za-z]/.test(name)) {
+        setFieldInvalid(nameField, 'customer-name-error', 'Please enter a valid name that is at least 3 characters and contains no numbers.');
+        valid = false;
+      }
+
+      if (!/^03\d{9}$/.test(phone)) {
+        setFieldInvalid(phoneField, 'customer-phone-error', 'Please enter a valid 11-digit phone number starting with 03.');
+        valid = false;
+      }
+
+      if (address.length < 15) {
+        setFieldInvalid(addressField, 'customer-address-error', 'Please enter an address at least 15 characters long.');
+        valid = false;
+      }
+
+      if (!valid) {
+        errorElement.textContent = 'Please fix the highlighted fields before placing your order.';
+        errorElement.style.display = 'block';
+        return;
+      }
+
+      // Show processing state
+      const placeBtn = document.getElementById('place-order-btn');
+      document.getElementById('form-heading').style.display = 'none';
+      document.getElementById('processing-heading').style.display = 'block';
+      document.getElementById('order-form').style.display = 'none';
+      setButtonLoading(placeBtn, true, 'Processing...');
+
+      try {
+        const cart = getCart();
+        if (!cart || cart.length === 0) {
+          showNotification('Your cart is empty!', 'error');
+          // Reset UI
+          resetOrderForm();
+          return;
+        }
+
+        let total = 0;
+        cart.forEach(item => total += (item.price || 0) * (item.quantity || 1));
+
+        const orderData = {
+          customerName: name,
+          phone: phone,
+          address: address,
+          items: cart,
+          totalAmount: total,
+          status: 'new',
+          timestamp: serverTimestamp(),
+          createdAt: serverTimestamp(),
+          paymentMethod: document.getElementById('payment-cash').classList.contains('active') ? 'Cash' : 'Card'
+        };
+
+        console.log('Saving Order to Firestore orders:', orderData);
+        
+        // Save to Firestore 'orders' collection
+        const ordersRef = collection(db, 'orders');
+        const docRef = await addDoc(ordersRef, orderData);
+        const finalOrderId = docRef.id;
+
+        console.log('✅ Order saved to Firestore with ID:', finalOrderId);
+
+        // Also save to RTDB for backward compatibility
+        const newOrderRef = push(ref(database, 'orders'));
+        await set(newOrderRef, orderData);
+        
+        // **CRITICAL: Clear cart immediately after successful order**
+        localStorage.removeItem('cart');
+        console.log('✅ Cart cleared from localStorage');
+        
+        // Show success
+        document.getElementById('processing-heading').textContent = 'Order Placed Successfully! 🎉';
+        document.getElementById('place-order-btn').textContent = 'Order Placed';
+        
+        alert('Order Placed Successfully! Your order ID is: ' + finalOrderId);
+        showNotification('Order Placed! Redirecting you to order tracking.', 'success');
+        
+        setTimeout(() => {
+          window.location.href = 'track-order.html?orderId=' + finalOrderId;
+        }, 1500);
+
+      } catch (err) {
+        console.error('❌ [placeOrder] Error:', err);
+        // Reset UI
+        resetOrderForm();
+        const friendlyMessage = mapFirebaseErrorToFriendlyMessage(err);
+        errorElement.textContent = friendlyMessage;
+        errorElement.style.display = 'block';
+        showNotification(friendlyMessage, 'error');
+      }
+    }
+
+    function setButtonLoading(button, isLoading, text) {
+      if (!button) return;
+      button.disabled = Boolean(isLoading);
+      button.textContent = isLoading ? (text || 'Order in Process...') : 'Place Order';
+      if (isLoading) {
+        button.classList.add('loading');
+      } else {
+        button.classList.remove('loading');
+      }
+    }
+
+    function resetOrderForm() {
+      document.getElementById('form-heading').style.display = 'block';
+      document.getElementById('processing-heading').style.display = 'none';
+      document.getElementById('order-form').style.display = 'block';
+      setButtonLoading(document.getElementById('place-order-btn'), false, 'Place Order');
+
+      clearFieldValidation(document.getElementById('customer-name'), 'customer-name-error');
+      clearFieldValidation(document.getElementById('customer-phone'), 'customer-phone-error');
+      clearFieldValidation(document.getElementById('customer-address'), 'customer-address-error');
+      const errorElement = document.getElementById('order-error');
+      if (errorElement) {
+        errorElement.style.display = 'none';
+      }
+    }
+
+    // Load and display pending order from URL parameter
+    function loadOrderFromURL() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const orderId = urlParams.get('id');
+      
+      if (!orderId) {
+        console.log('ℹ️  No order ID in URL - showing checkout form');
+        loadCart(); // Load cart for checkout
+        return false;
+      }
+      
+      console.log('📋 Found order ID in URL:', orderId);
+      currentOrderIdFirebase = orderId;
+      
+      // Setup listener to check if order has customer details
+      const orderRef = ref(db, 'orders/' + orderId);
+      onValue(orderRef, (snapshot) => {
+        const order = snapshot.val();
+        if (!order) {
+          console.log('Order not found - showing checkout form');
+          loadCart();
+          return;
+        }
+        
+        const hasCustomerDetails = order.customerName && order.phone && order.address;
+        if (hasCustomerDetails) {
+          // Order has customer details - show pending UI
+          console.log('Order has customer details - showing pending UI');
+          // Hide the form elements and cart
+          document.getElementById('empty-cart').style.display = 'none';
+          document.getElementById('cart-container').style.display = 'none';
+          document.querySelector('.form-card').parentElement.style.display = 'none';
+          
+          // Show pending status
+          showPendingOrderUI(orderId);
+          
+          // Setup order listener for status updates
+          setupOrderListener(orderId);
+        } else {
+          // Order exists but no customer details - show form with cart from Firebase order
+          console.log('Order exists but no customer details - showing form');
+          const remoteCart = order.cart || order.items;
+          if (remoteCart) {
+            // Temporarily set cart in localStorage for display
+            localStorage.setItem('cart', JSON.stringify(remoteCart));
+            loadCart();
+          }
+          // Keep form visible
+        }
+      }, { onlyOnce: true }); // Only check once on load
+      
+      return true;
+    }
+
+    // Show pending order status UI
+    function showPendingOrderUI(orderId) {
+      console.log('📭 Showing pending order UI for:', orderId);
+      
+      // Create a pending status section
+      const pendingSection = document.createElement('section');
+      pendingSection.id = 'order-pending-section';
+      pendingSection.className = 'section';
+      pendingSection.style = 'margin-top: 20px;';
+      pendingSection.innerHTML = `
+        <div class="container" style="max-width:600px;">
+          <div class="order-success-card">
+            <div class="success-icon">⏳</div>
+            <h2>Your Order is Pending</h2>
+            <p>We've received your order and are waiting for our restaurant manager to accept it!</p>
+            <div style="margin-top: 24px; padding: 16px; background: #fff1e6; border-radius: 8px; border-left: 4px solid #d4af37;">
+              <p style="margin: 8px 0; color: #333;"><strong>Order ID:</strong> ${orderId}</p>
+              <p style="margin: 8px 0; color: #333;"><strong>Status:</strong> <span style="color: #ff9800; font-weight: bold;">⏳ PENDING</span></p>
+            </div>
+            <p class="tracker-sub" style="margin-top: 24px;">Keep this page open. We'll notify you as soon as your order is accepted!</p>
+          </div>
+        </div>
+      `;
+      
+      // Insert before the order-success section
+      const orderSuccessSection = document.getElementById('order-success');
+      if (orderSuccessSection) {
+        orderSuccessSection.parentElement.insertBefore(pendingSection, orderSuccessSection);
+      }
+    }
+
+    // Setup Firebase listener for real-time order updates
+    function setupOrderListener(orderId) {
+      console.log('📡 Setting up Firebase listener for order:', orderId);
+      
+      // Clean up existing listener
+      if (orderListenerUnsubscribe) {
+        orderListenerUnsubscribe();
+      }
+
+      const orderRef = ref(db, 'orders/' + orderId);
+      
+      orderListenerUnsubscribe = onValue(orderRef, (snapshot) => {
+        const order = snapshot.val();
+        if (!order) {
+          console.log('Order not found in Firebase');
+          return;
+        }
+        
+        console.log('📦 Received order update from Firebase:', order);
+        
+        // Check if delivery time was increased
+        if (order.deliveryMinutes && lastDeliveryMinutes !== null && order.deliveryMinutes > lastDeliveryMinutes) {
+          console.log('⏱️  Delivery time increased from', lastDeliveryMinutes, 'to', order.deliveryMinutes, 'minutes');
+          showDeliveryTimeNotification(lastDeliveryMinutes, order.deliveryMinutes);
+        }
+        
+        lastDeliveryMinutes = order.deliveryMinutes;
+        
+        // Update status UI
+        if (order.status === 'pending') {
+          console.log('⏳ Order is pending - waiting for admin acceptance');
+          // Keep showing pending UI, already displayed
+        } else if ((order.status === 'in process' || order.status === 'accepted') && order.deliveryMinutes) {
+          // Hide pending UI when transitioning to accepted
+          const pendingSection = document.getElementById('order-pending-section');
+          if (pendingSection) {
+            pendingSection.style.display = 'none';
+          }
+          setOrderAcceptedUI(order);
+        } else if (order.status === 'completed') {
+          clearOrderTimer();
+          stopStatusPolling();
+          document.getElementById('order-status-panel').style.display = 'none';
+          document.getElementById('order-success').style.display = 'none';
+          document.getElementById('order-cancelled').style.display = 'none';
+          document.getElementById('order-delivered').style.display = 'block';
+        } else if (order.status === 'cancelled') {
+          clearOrderTimer();
+          stopStatusPolling();
+          setOrderCancelledUI();
+        }
+      });
+    }
+
+    // Show chef working message when order is accepted
+    function showChefWorkingMessage() {
+      const message = document.createElement('div');
+      message.id = 'chef-working-message';
+      message.style = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #d4af37 0%, #ffd700 100%);
+        color: #111;
+        padding: 24px 32px;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(212, 175, 55, 0.4);
+        z-index: 9998;
+        font-weight: 700;
+        max-width: 400px;
+        text-align: center;
+        font-size: 1.1rem;
+        animation: slideInDown 0.5s ease-out;
+      `;
+      
+      message.textContent = "Haji's chefs are working their magic on your meal! 👨‍🍳🔥";
+      document.body.appendChild(message);
+      
+      // Auto-hide after 4 seconds
+      setTimeout(() => {
+        message.style.animation = 'slideOutUp 0.5s ease-out';
+        setTimeout(() => {
+          if (document.body.contains(message)) {
+            document.body.removeChild(message);
+          }
+        }, 500);
+      }, 4000);
+    }
+
+    // Show notification when delivery time is increased
+    function showDeliveryTimeNotification(oldMinutes, newMinutes) {
+      const notification = document.createElement('div');
+      notification.id = 'delivery-time-notification';
+      notification.style = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #ff9800;
+        color: #fff;
+        padding: 16px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 9999;
+        font-weight: 600;
+        max-width: 350px;
+        animation: slideInRight 0.3s ease-out;
+      `;
+      
+      const message = newMinutes > oldMinutes 
+        ? `⏱️ Update: We are taking a bit longer to ensure the best quality! (${newMinutes} minutes)`
+        : `✅ Great news! Your order will arrive sooner! (${newMinutes} minutes)`;
+      
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      
+      // Auto-remove after 5 seconds
+      setTimeout(() => {
+        notification.style.animation = 'slideOutRight 0.3s ease-out';
+        setTimeout(() => {
+          if (document.body.contains(notification)) {
+            document.body.removeChild(notification);
+          }
+        }, 300);
+      }, 5000);
+    }
+
+    // Add CSS animations
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideInRight {
+        from {
+          transform: translateX(400px);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      @keyframes slideOutRight {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(400px);
+          opacity: 0;
+        }
+      }
+      @keyframes slideInDown {
+        from {
+          transform: translate(-50%, -150%);
+          opacity: 0;
+        }
+        to {
+          transform: translate(-50%, -50%);
+          opacity: 1;
+        }
+      }
+      @keyframes slideOutUp {
+        from {
+          transform: translate(-50%, -50%);
+          opacity: 1;
+        }
+        to {
+          transform: translate(-50%, -150%);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
+    let orderTimerInterval = null;
+    let orderTimerRemaining = 0;
+
+    function clearOrderTimer() {
+      if (orderTimerInterval) {
+        clearInterval(orderTimerInterval);
+        orderTimerInterval = null;
+      }
+    }
+
+    function updateOrderTimerDisplay() {
+      const timerElement = document.getElementById('order-success-timer');
+      if (!timerElement || orderTimerRemaining === null || orderTimerRemaining === undefined) return;
+      const minutesLeft = Math.floor(orderTimerRemaining / 60);
+      const seconds = orderTimerRemaining % 60;
+      timerElement.textContent = `${minutesLeft}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    function setOrderCancelledUI() {
+      clearOrderTimer();
+      document.getElementById('order-status-panel').style.display = 'none';
+      document.getElementById('order-success').style.display = 'none';
+      document.getElementById('order-delivered').style.display = 'none';
+      document.getElementById('order-cancelled').style.display = 'block';
+      const cancelledText = document.querySelector('#order-cancelled p');
+      if (cancelledText) {
+        cancelledText.textContent = "Sorry! Your order has been cancelled by Haji's Restaurant.";
+      }
+      const cancelledLabel = document.createElement('div');
+      cancelledLabel.style = 'color:#fff; background:#d90429; padding:10px 12px; margin-top:8px; border-radius:6px; font-weight:700;';
+      cancelledLabel.textContent = 'Cancelled';
+      const existingLabel = document.getElementById('cancelled-status-label');
+      if (!existingLabel) {
+        cancelledLabel.id = 'cancelled-status-label';
+        document.getElementById('order-cancelled').appendChild(cancelledLabel);
+      }
+    }
+
+    function setOrderAcceptedUI(order) {
+      document.getElementById('order-status-panel').style.display = 'none';
+      document.getElementById('order-cancelled').style.display = 'none';
+      document.getElementById('order-delivered').style.display = 'none';
+      document.getElementById('order-success').style.display = 'block';
+      document.querySelector('#order-success h2').textContent = 'Yum! Your Order is Confirmed! 🍛';
+      clearCart();
+      // Show chef working message
+      setTimeout(() => {
+        showChefWorkingMessage();
+      }, 500);
+      startOrderTimer(order.deliveryMinutes || 0);
+    }
+
+    function startOrderTimer(minutes) {
+      clearOrderTimer();
+
+      console.log('⏱️ Starting order timer calculation');
+
+      const calculateRemaining = () => {
+        if (!currentOrderIdFirebase) return;
+        
+        const orderRef = ref(db, 'orders/' + currentOrderIdFirebase);
+        get(orderRef).then((snapshot) => {
+          const order = snapshot.val();
+          if (order && order.deliveryMinutes && order.acceptedAt) {
+            const acceptedAt = new Date(order.acceptedAt).getTime();
+            const elapsedSec = Math.floor((Date.now() - acceptedAt) / 1000);
+            orderTimerRemaining = Math.max(0, Math.round(order.deliveryMinutes * 60 - elapsedSec));
+            
+            updateOrderTimerDisplay();
+
+            if (orderTimerRemaining <= 0) {
+              clearOrderTimer();
+              showOrderDeliveredUI();
+            }
+          }
+        });
+      };
+
+      // Calculate once immediately
+      calculateRemaining();
+
+      // Update locally every second
+      orderTimerInterval = setInterval(() => {
+        if (orderTimerRemaining > 0) {
+          orderTimerRemaining--;
+          updateOrderTimerDisplay();
+        } else {
+           // Periodically re-check from server if we hit zero
+           calculateRemaining();
+        }
+      }, 1000);
+    }
+
+    function syncOrderStatusFromStorage() {
+      // DEPRECATED: Firebase real-time listener handles all updates now
+      console.log('ℹ️  syncOrderStatusFromStorage() - Firebase listener handles updates');
+    }
+
+    window.addEventListener('storage', (event) => {
+      // DEPRECATED: Firebase real-time listener handles all order updates
+      // Keeping this for backward compatibility with other features
+      console.log('ℹ️  Storage event received - Firebase listener handles order updates');
+    });
+
+    // Function to show delivered screen
+    function showOrderDeliveredUI() {
+      console.log('🎉 Order timer expired - showing delivered screen');
+      document.getElementById('order-status-panel').style.display = 'none';
+      document.getElementById('order-success').style.display = 'none';
+      document.getElementById('order-cancelled').style.display = 'none';
+      document.getElementById('order-delivered').style.display = 'block';
+      
+      // Reset feedback form for new review
+      resetFeedbackForm();
+    }
+
+    // Reset feedback form
+    function resetFeedbackForm() {
+      window.selectedRating = 0;
+      document.getElementById('review-comment').value = '';
+      document.getElementById('review-submit').disabled = false;
+      document.getElementById('review-submit').style.opacity = '1';
+      document.getElementById('review-submit').textContent = 'Submit Review';
+      document.getElementById('rating-stars').style.opacity = '1';
+      document.getElementById('rating-stars').style.pointerEvents = 'auto';
+      document.getElementById('review-comment').style.opacity = '1';
+      document.getElementById('review-comment').disabled = false;
+      
+      // Reset star colors
+      const stars = document.querySelectorAll('#rating-stars .star');
+      stars.forEach(star => {
+        star.style.color = '#888';
+        star.classList.remove('active');
+      });
+      
+      // Update display
+      document.getElementById('rating-display').textContent = '';
+    }
+
+    function submitReview(rating, comment) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const orderId = currentOrderIdFirebase || urlParams.get('id');
+      if (!orderId) {
+        console.error('No order ID found for review');
+        return;
+      }
+      
+      const reviewData = {
+        rating: rating,
+        comment: comment,
+        timestamp: new Date().toISOString(),
+        orderId: orderId
+      };
+      
+      // Save to Firebase
+      const reviewsRef = ref(db, 'hajis_reviews/' + Date.now());
+      set(reviewsRef, reviewData)
+        .then(() => {
+          console.log('✅ Review saved to Firebase:', reviewData);
+        })
+        .catch((error) => {
+          console.error('❌ Error saving review to Firebase:', error);
+        });
+    }
+
+    function checkOrderStatus() {
+      // DEPRECATED: Firebase real-time listener handles all status updates
+      console.log('ℹ️  checkOrderStatus() - Firebase listener handles updates');
+    }
+
+    let statusCheckInterval = null;
+
+    function startStatusPolling() {
+      // DEPRECATED: Firebase real-time listener handles all updates
+      console.log('ℹ️  startStatusPolling() - Firebase listener is active');
+    }
+
+    function stopStatusPolling() {
+      // DEPRECATED: Firebase real-time listener handles all status updates
+      // No polling needed - Firebase onValue() provides instant updates
+      console.log('ℹ️  stopStatusPolling() - Firebase listener handles updates');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('Order page loaded, initializing...');
+      
+      // Check if loading an existing order from URL parameter
+      const isExistingOrder = loadOrderFromURL();
+      
+      if (!isExistingOrder) {
+        // Normal checkout flow - show form and cart
+        loadCart();
+      }
+      
+      const placeOrderBtn = document.getElementById('place-order-btn');
+      if (placeOrderBtn) {
+        placeOrderBtn.addEventListener('click', placeOrder);
+      }
+      
+      setupRatingStars();
+      
+      // Removed cart_synced event listener
+      
+      // Order tracking is tied to the URL query string: order.html?id=ORDER_ID
+    });
+
+    function setupRatingStars() {
+      const stars = Array.from(document.querySelectorAll('#rating-stars .star'));
+      
+      stars.forEach(star => {
+        star.addEventListener('click', (e) => {
+          const val = parseInt(e.currentTarget.dataset.value, 10);
+          window.selectedRating = val;
+          document.getElementById('rating-display').textContent = val + '/5 stars';
+          
+          stars.forEach((s) => {
+            const sVal = parseInt(s.dataset.value, 10);
+            if (sVal <= val) {
+              s.classList.add('active');
+              s.style.color = '#22c55e';
+            } else {
+              s.classList.remove('active');
+              s.style.color = '#888';
+            }
+          });
+        });
+
+        star.addEventListener('mouseover', (e) => {
+          const hoverVal = parseInt(e.currentTarget.dataset.value, 10);
+          stars.forEach((s) => {
+            const sVal = parseInt(s.dataset.value, 10);
+            s.style.opacity = (sVal <= hoverVal) ? '0.8' : '0.4';
+          });
+        });
+      });
+
+      document.getElementById('rating-stars').addEventListener('mouseleave', () => {
+        stars.forEach(s => s.style.opacity = '1');
+      });
+    }
+
+    function handleReviewSubmit() {
+      console.log('✅ UI Feedback: Submit Review button clicked!');
+      const rating = window.selectedRating || 0;
+      const comment = document.getElementById('review-comment').value.trim();
+      
+      console.log('Captured Rating:', rating, 'Comment:', comment);
+
+      if (rating === 0) {
+        alert('Please select a rating!');
+        return;
+      }
+
+      if (comment === '') {
+        alert('Please add a comment!');
+        return;
+      }
+
+      // Submit the review
+      submitReview(rating, comment);
+
+      // Show confirmation message
+      const confirmMsg = document.getElementById('review-confirmation');
+      confirmMsg.style.display = 'block';
+
+      // Disable submit button
+      const submitBtn = document.getElementById('review-submit');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.5';
+        submitBtn.textContent = 'Review Submitted ✓';
+      }
+
+      // Hide form elements after 2 seconds
+      setTimeout(() => {
+        document.getElementById('rating-stars').style.opacity = '0.5';
+        document.getElementById('rating-stars').style.pointerEvents = 'none';
+        document.getElementById('review-comment').style.opacity = '0.5';
+        document.getElementById('review-comment').disabled = true;
+      }, 2000);
+    }
+
+    // Explicitly expose function to the global window scope directly in the module
+    window.handleReviewSubmit = handleReviewSubmit;
+  </script>
+</head>
+<body>
+<nav class="navbar"><div class="container"><a href="index.html" class="nav-brand"><span class="red">HAJI'S</span><span class="sub">PAKISTANI & INDIAN FUSION</span></a><ul class="nav-links"><li><a href="index.html">Home</a></li><li><a href="menu.html">Menu</a></li><li><a href="order.html" class="active">Order Online</a></li><li><a href="track-order.html">TRACK ORDER</a></li><li><a href="gallery.html">Gallery</a></li><li><a href="catering.html">Catering</a></li><li><a href="reviews.html">Reviews</a></li><li><a href="about.html">About</a></li><li><a href="contact.html">Contact</a></li></ul><button class="nav-toggle" onclick="document.getElementById('mob-menu').classList.toggle('open')">☰</button></div><div id="mob-menu" class="nav-mobile"><a href="index.html">Home</a><a href="menu.html">Menu</a><a href="order.html">Order Online</a><a href="track-order.html">TRACK ORDER</a><a href="gallery.html">Gallery</a><a href="catering.html">Catering</a><a href="reviews.html">Reviews</a><a href="about.html">About</a><a href="contact.html">Contact</a></div></nav>
+
+<div class="pt-20">
+<section class="section text-center">
+  <div class="container">
+    <p class="section-label">Order Online</p>
+    <h1 class="section-title">Place Your Order</h1>
+    <p class="section-desc">Browse our menu, add items to cart, and checkout for fast delivery!</p>
+    <div style="margin-bottom:40px"><a href="menu.html" class="btn btn-primary">Browse Full Menu</a></div>
+  </div>
+</section>
+
+<section class="section section-card">
+  <div class="container" style="max-width:900px">
+    <h2 class="section-title text-center">Your Cart</h2>
+    <p id="empty-cart" class="text-center" style="color:var(--muted-fg);font-size:1.1rem">Your cart is empty. Visit the <a href="menu.html" style="color:var(--primary)">Menu page</a> to add items!</p>
+
+    <div id="cart-container" style="display:none;margin:24px auto 8px; max-width:100%;">
+      <table style="width:100%; border-collapse:collapse; margin-bottom:12px;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border)">
+            <th style="text-align:left;padding:6px">Item</th>
+            <th style="text-align:right;padding:6px">Price</th>
+            <th style="text-align:center;padding:6px">Qty</th>
+            <th style="text-align:right;padding:6px">Total</th>
+            <th style="text-align:center;padding:6px">Action</th>
+          </tr>
+        </thead>
+        <tbody id="cart-table-body"></tbody>
+      </table>
+      <div class="cart-total" style="justify-content:flex-end; margin-bottom:12px">Total: <span id="cart-total">$0.00</span></div>
+      <button class="btn btn-outline-gold" onclick="clearCart(); window.location.reload();" style="float:right;">Clear Cart</button>
+      <div style="clear:both"></div>
+    </div>
+
+    <div style="max-width:600px;margin:48px auto 0">
+      <h3 id="form-heading" style="font-size:1.5rem;font-weight:700;margin-bottom:24px">Delivery Details</h3>
+      <h3 id="processing-heading" style="font-size:1.5rem;font-weight:700;margin-bottom:24px;display:none;color:var(--gold)">Order in Process...</h3>
+      <div class="form-card" id="order-form">
+        <div style="margin-bottom:14px;">
+          <input id="customer-name" class="form-input" type="text" placeholder="Full Name" required>
+          <span id="customer-name-error" style="display:none;color:#ff6b6b;font-size:0.9rem;margin-top:6px;">Please enter your full name (at least 3 letters, no numbers).</span>
+        </div>
+        <div style="margin-bottom:14px;">
+          <input id="customer-phone" class="form-input" type="tel" placeholder="Phone Number" required>
+          <span id="customer-phone-error" style="display:none;color:#ff6b6b;font-size:0.9rem;margin-top:6px;">Please enter a valid 11-digit Pakistani phone number starting with 03.</span>
+        </div>
+        <div style="margin-bottom:14px;">
+          <textarea id="customer-address" class="form-input" rows="3" placeholder="Delivery Address" required></textarea>
+          <span id="customer-address-error" style="display:none;color:#ff6b6b;font-size:0.9rem;margin-top:6px;">Please enter an address at least 15 characters long.</span>
+        </div>
+        <div class="payment-btns">
+          <button id="payment-cash" class="payment-btn active" type="button">Cash on Delivery</button>
+          <button id="payment-card" class="payment-btn" type="button">Card Payment</button>
+        </div>
+
+        <p id="order-error" style="color:#ff6b6b; font-weight:600; display:none; margin:10px 0; text-align:center;"></p>
+
+        <div id="card-details" style="display:none; margin-bottom:16px;">
+          <input id="card-number" class="form-input" type="text" placeholder="Card Number" maxlength="19">
+          <div class="form-row">
+            <input id="card-expiry" class="form-input" type="text" placeholder="MM/YY" maxlength="5">
+            <input id="card-cvv" class="form-input" type="text" placeholder="CVV" maxlength="4">
+          </div>
+        </div>
+
+        <button class="btn-submit" type="button" id="place-order-btn">Place Order</button>
+        <div id="order-status-panel" style="display:none; margin-top:16px; text-align:center;">
+          <div class="status-spinner" id="status-spinner"></div>
+          <p id="order-status-text" style="color: var(--gold); font-weight:600; margin-top:10px;">Please wait while we confirm your order...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="order-success" style="display:none;">
+  <div class="container" style="max-width:600px;">
+    <div class="order-success-card">
+      <div class="success-icon">✅</div>
+      <h2>Yum! Your Order is Confirmed! 🍛</h2>
+      <p>Our chefs at Haji's Restaurant are preparing your delicious meal with love. It will reach you soon!</p>
+      <div class="cooking-animation">👨‍🍳</div>
+      <div class="tracker">
+        <span>Estimated Delivery:</span>
+        <strong id="order-success-timer">60:00</strong>
+      </div>
+      <p class="tracker-sub">Keep this page open to track your order in real-time.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="order-cancelled" style="display:none;">
+  <div class="container" style="max-width:600px;">
+    <div class="order-cancelled-card">
+      <div class="cancel-icon">✕</div>
+      <h2>Order Cancelled</h2>
+      <p>Sorry, your order was cancelled by the restaurant.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="order-delivered" style="display:none;">
+  <div class="container" style="max-width:600px;">
+    <div class="order-delivered-card">
+      <div class="delivered-icon">🎉</div>
+      <h2>Order Delivered! Hope you enjoy your meal! 😋</h2>
+      <p>We'd love to hear your thoughts about your experience!</p>
+      
+      <div style="margin: 24px 0;">
+        <p style="margin-bottom: 12px; font-weight: 600; color: #a0a0a0;">Rate your experience:</p>
+        <div class="rating-stars" id="rating-stars">
+          <span class="star" data-value="1">⭐</span>
+          <span class="star" data-value="2">⭐</span>
+          <span class="star" data-value="3">⭐</span>
+          <span class="star" data-value="4">⭐</span>
+          <span class="star" data-value="5">⭐</span>
+        </div>
+        <p id="rating-display" style="text-align: center; color: var(--gold); margin-top: 8px; font-weight: 600; min-height: 20px;"></p>
+      </div>
+
+      <div style="margin: 16px 0;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #a0a0a0;">Any comments?</label>
+        <textarea id="review-comment" class="form-input" rows="4" placeholder="Tell us about your meal, delivery, and service..."></textarea>
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-top: 20px;">
+        <button id="review-submit" class="btn-submit" style="flex: 1;" onclick="handleReviewSubmit()">Submit Review</button>
+        <a href="index.html" class="btn-primary" style="flex: 1; text-align: center; display: flex; align-items: center; justify-content: center; text-decoration: none;">Back to Home</a>
+      </div>
+
+      <p id="review-confirmation" style="color: #22c55e; text-align: center; margin-top: 12px; display: none; font-weight: 600;">✅ Thank you for your review!</p>
+    </div>
+  </div>
+</section>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <p style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:12px"><span class="red">HAJI'S</span> <span class="gold">RESTAURANT</span></p>
+        <p style="color:var(--muted-fg);font-size:0.875rem">Pakistani and Indian Fusion Kitchen — Crafted with passion, served with love.</p>
+        <div class="footer-links">
+          <a href="#">Terms & Policies</a>
+          <a href="#">Accessibility Statement</a>
+        </div>
+      </div>
+      <div class="footer-contact">
+        <h4>Contact Info</h4>
+        <p><span class="icon">📞</span> (650) 507-3959</p>
+        <p><span class="icon">✉️</span> Hajisstaff@gmail.com</p>
+      </div>
+      <div>
+        <h4>Newsletter</h4>
+        <div class="newsletter-signup">
+          <input type="email" placeholder="Enter your email">
+          <button>Send</button>
+        </div>
+      </div>
+      <div class="footer-locations">
+        <h4>Locations</h4>
+        <ul>
+          <li>Hajis Restaurant Menlo Park</li>
+          <li>San Jose</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">© 2026 Haji's Restaurant. All rights reserved.</div>
+  </div>
+</footer>
+<a href="https://wa.me/923102041770" target="_blank" class="whatsapp-fab" aria-label="Chat on WhatsApp">📱</a>
+
+<!-- Floating Chat Button -->
+<button class="help-fab" onclick="openChat()">💬</button>
+
+<!-- Chat Popup -->
+<div id="help-popup" class="help-popup">
+  <div class="chat-header" style="background:#cc0000 !important;color:#fff !important;">
+    <h3 style="color:#fff !important;">Haji's Support Bot</h3>
+    <button class="chat-close" onclick="closeChat()">×</button>
+  </div>
+  <div class="chat-messages" id="chat-messages">
+    <div class="message bot">Hello! Welcome to Haji's Support.</div>
+  </div>
+  <div class="chat-input-area">
+    <textarea id="chat-input" placeholder="Type your message..." rows="3"></textarea>
+    <button id="hajiSendBtn" style="background:#cc0000 !important;color:#fff !important;border:1px solid #cc0000 !important;" onclick="sendMessage()">Send to Haji's</button>
+  </div>
+</div>
+
+<script>
+let chatInterval = null;
+
+let customerChatUnsubscribe = null;
+
+function getSupportCustomerId() {
+  let customerId = localStorage.getItem('hajis_customer_id');
+  if (!customerId) {
+    customerId = 'cust_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('hajis_customer_id', customerId);
+  }
+  return customerId;
+}
+
+function openChat() {
+  document.getElementById('help-popup').style.display = 'flex';
+  startSupportMessageListener();
+}
+
+function closeChat() {
+  document.getElementById('help-popup').style.display = 'none';
+  if (customerChatUnsubscribe) {
+    customerChatUnsubscribe();
+    customerChatUnsubscribe = null;
+  }
+}
+
+function startSupportMessageListener() {
+  if (customerChatUnsubscribe) return;
+  const customerId = getSupportCustomerId();
+  const messagesRef = collection(db, 'support_messages');
+  const messagesQuery = query(messagesRef, where('customerId', '==', customerId));
+
+  customerChatUnsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+    const entries = [];
+    snapshot.forEach((docSnapshot) => {
+      entries.push({ id: docSnapshot.id, ...docSnapshot.data() });
+    });
+
+    entries.sort((a, b) => {
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return aTime - bTime;
+    });
+
+    renderCustomerSupportMessages(entries);
+  }, (error) => {
+    console.error('❌ Error loading support messages:', error);
+  });
+}
+
+function renderCustomerSupportMessages(entries) {
+  const chatMessages = document.getElementById('chat-messages');
+  const welcome = chatMessages.querySelector('.message.bot');
+  chatMessages.innerHTML = '';
+  if (welcome) chatMessages.appendChild(welcome.cloneNode(true));
+
+  entries.forEach(entry => {
+    if (entry.messages && Array.isArray(entry.messages)) {
+      entry.messages.forEach(msg => {
+        const messageType = msg.sender === 'admin' ? 'bot' : 'user';
+        addMessage(msg.text, messageType);
+      });
+    } else if (entry.message) {
+      addMessage(entry.message, 'user');
+      if (entry.adminReply) addMessage(entry.adminReply, 'bot');
+    }
+  });
+
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const message = input.value.trim();
+  if (!message) return;
+
+  addMessage(message, 'user');
+  input.value = '';
+
+  const customerId = getSupportCustomerId();
+  const supportRef = collection(db, 'support_messages');
+  const supportQuery = query(supportRef, where('customerId', '==', customerId));
+
+  try {
+    const snapshot = await getDocs(supportQuery);
+    if (!snapshot.empty) {
+      const docRef = snapshot.docs[0].ref;
+      await updateDoc(docRef, {
+        messages: arrayUnion({
+          text: message,
+          sender: 'customer',
+          timestamp: new Date()
+        }),
+        status: 'pending',
+        updatedAt: new Date().toISOString(),
+        lastMessageTime: new Date()
+      });
+    } else {
+      await addDoc(supportRef, {
+        customerId,
+        customerName: 'Chat User',
+        messages: [{
+          text: message,
+          sender: 'customer',
+          timestamp: new Date()
+        }],
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        lastMessageTime: new Date()
+      });
+    }
+    showNotification('Message sent to Haji\'s Support. We will respond shortly.', 'success');
+  } catch (error) {
+    console.error('❌ Failed to send support message:', error);
+    addMessage('Failed to send message. Please try again.', 'bot');
+    showNotification('Unable to send your support message. Please try again.', 'error');
+  }
+}
+
+function addMessage(text, type) {
+  const messagesDiv = document.getElementById('chat-messages');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `message ${type}`;
+  messageDiv.textContent = text;
+  messagesDiv.appendChild(messageDiv);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+// Make functions global for HTML onclick handlers
+window.removeFromCart = removeFromCart;
+window.clearCart = clearCart;
+window.updateQuantity = updateQuantity;
+window.openChat = openChat;
+window.closeChat = closeChat;
+window.sendMessage = sendMessage;
+
+</script>
+</body>
+</html>

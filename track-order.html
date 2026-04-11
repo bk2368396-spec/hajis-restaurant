@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Track Your Order - Haji's Restaurant</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      background: #0b1120;
+      color: #f8fafc;
+      min-height: 100vh;
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .track-container {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .track-card {
+      background: #111827;
+      border: 1px solid #2d3748;
+      border-radius: 24px;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+    }
+    .track-header {
+      padding: 28px 32px;
+      background: linear-gradient(135deg, #0f172a 0%, #111827 100%);
+    }
+    .track-header h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.8rem, 2.1vw, 2.7rem);
+      color: #f8fafc;
+    }
+    .track-header p {
+      margin: 0;
+      color: #94a3b8;
+    }
+    .progress-bar {
+      display: flex;
+      gap: 18px;
+      margin: 32px 0 24px;
+    }
+    .step {
+      flex: 1;
+      position: relative;
+      padding: 22px 18px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      transition: background 0.25s ease, border-color 0.25s ease;
+    }
+    .step::before {
+      content: '';
+      position: absolute;
+      left: calc(50% - 10px);
+      top: -12px;
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.3);
+      border: 2px solid rgba(148, 163, 184, 0.4);
+    }
+    .step.active {
+      background: #e2e8f0;
+      border-color: #38bdf8;
+      color: #0f172a;
+    }
+    .step.active::before {
+      background: #38bdf8;
+      border-color: #38bdf8;
+    }
+    .step.complete {
+      background: #d9f99d;
+      border-color: #4ade80;
+      color: #0f172a;
+    }
+    .step.complete::before {
+      background: #4ade80;
+      border-color: #4ade80;
+    }
+    .step h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .step p {
+      margin: 0;
+      font-size: 0.95rem;
+      line-height: 1.55;
+    }
+    .order-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+    .details-card {
+      background: #111827;
+      border: 1px solid #2d3748;
+      border-radius: 22px;
+      padding: 24px;
+    }
+    .details-card h4 {
+      margin: 0 0 12px;
+      font-size: 1rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
+    .details-card p {
+      margin: 8px 0;
+      color: #e2e8f0;
+      line-height: 1.7;
+    }
+    .item-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .item-list li {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      color: #e2e8f0;
+    }
+    .item-list li:last-child {
+      border-bottom: none;
+    }
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: rgba(14, 165, 233, 0.1);
+      border: 1px solid rgba(14, 165, 233, 0.2);
+      color: #e0f2fe;
+      font-weight: 700;
+    }
+    .loader {
+      margin: 24px auto;
+      width: 60px;
+      height: 60px;
+      border: 6px solid rgba(148, 163, 184, 0.2);
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .message-box {
+      background: rgba(148, 163, 184, 0.08);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 20px;
+      padding: 18px 22px;
+      margin-top: 18px;
+      color: #cbd5e1;
+    }
+    .estimated-time {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 20px 32px;
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 20px;
+      margin: 24px 32px;
+      color: #e0f2fe;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .track-card.cancelled {
+      background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%) !important;
+      border-color: #fca5a5 !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="track-container">
+    <div class="track-card">
+      <div class="track-header">
+        <h1>Track Your Order</h1>
+        <p>Haji's Restaurant Live Order Tracking</p>
+      </div>
+      <div class="estimated-time" id="estimated-time">
+        <span class="icon">⏰</span>
+        <span id="time-text">Calculating prep time...</span>
+      </div>
+      <div class="progress-bar" id="progress-bar">
+        <div class="step" id="step-placed">
+          <h3>Order Placed</h3>
+          <p>Your order has been received by the restaurant.</p>
+        </div>
+        <div class="step" id="step-preparing">
+          <h3>Preparing</h3>
+          <p>The kitchen is cooking your meal now.</p>
+        </div>
+        <div class="step" id="step-ready">
+          <h3>Ready</h3>
+          <p>Your order is ready for pickup or delivery.</p>
+        </div>
+        <div class="step" id="step-on-the-way">
+          <h3>On The Way</h3>
+          <p>Rider has picked up your meal and is heading to you.</p>
+        </div>
+      </div>
+      <div class="order-details">
+        <div class="details-card">
+          <h4>Order Summary</h4>
+          <p><strong>Order ID:</strong> <span id="order-id">loading...</span></p>
+          <p><strong>Status:</strong> <span id="order-status">Loading...</span></p>
+          <p><strong>Placed:</strong> <span id="order-created">Loading...</span></p>
+          <p><strong>Customer:</strong> <span id="customer-name">Loading...</span></p>
+          <p><strong>Delivery Address:</strong> <span id="customer-address">Loading...</span></p>
+        </div>
+        <div class="details-card">
+          <h4>Order Items</h4>
+          <ul class="item-list" id="order-items">
+            <li>Loading items...</li>
+          </ul>
+          <div class="message-box" id="order-total">
+            Total: <strong>$0.00</strong>
+          </div>
+        </div>
+      </div>
+      <div class="message-box" id="track-message">
+        Waiting for the restaurant to accept your order. Refresh not required — updates arrive live.
+      </div>
+      <div class="loader" id="track-loader"></div>
+    </div>
+  </div>
+  <script type="module">
+    import { db, doc, onSnapshot } from './firebase-config.js';
+
+    const orderId = new URLSearchParams(window.location.search).get('orderId');
+    const orderIdEl = document.getElementById('order-id');
+    const statusEl = document.getElementById('order-status');
+    const createdAtEl = document.getElementById('order-created');
+    const customerNameEl = document.getElementById('customer-name');
+    const customerAddressEl = document.getElementById('customer-address');
+    const orderItemsEl = document.getElementById('order-items');
+    const orderTotalEl = document.getElementById('order-total');
+    const messageBox = document.getElementById('track-message');
+    const loader = document.getElementById('track-loader');
+    const stepPlaced = document.getElementById('step-placed');
+    const stepPreparing = document.getElementById('step-preparing');
+    const stepReady = document.getElementById('step-ready');
+    const stepOnTheWay = document.getElementById('step-on-the-way');
+    const timeTextEl = document.getElementById('time-text');
+
+    let countdownInterval = null;
+    let remainingSeconds = 0;
+
+    function formatCountdown(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function startCountdown() {
+      if (countdownInterval) clearInterval(countdownInterval);
+      if (remainingSeconds <= 0) {
+        timeTextEl.textContent = 'Arriving soon!';
+        return;
+      }
+      timeTextEl.textContent = `Arriving in ${formatCountdown(remainingSeconds)}`;
+      countdownInterval = setInterval(() => {
+        remainingSeconds--;
+        if (remainingSeconds <= 0) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+          timeTextEl.textContent = 'Arriving soon!';
+        } else {
+          timeTextEl.textContent = `Arriving in ${formatCountdown(remainingSeconds)}`;
+        }
+      }, 1000); // Update every second
+    }
+
+    function formatOrderDate(timestamp) {
+      if (!timestamp) return 'Unknown';
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      return date.toLocaleString();
+    }
+
+    function formatCurrency(value) {
+      return `$${Number(value || 0).toFixed(2)}`;
+    }
+
+    function updateProgress(status) {
+      const normalized = String(status || '').toLowerCase();
+      stepPlaced.className = 'step';
+      stepPreparing.className = 'step';
+      stepReady.className = 'step';
+      stepOnTheWay.className = 'step';
+
+      if (normalized === 'new') {
+        stepPlaced.classList.add('active');
+        messageBox.textContent = 'Your order is placed and waiting to be prepared.';
+      } else if (normalized === 'preparing' || normalized === 'accepted' || normalized === 'in process') {
+        stepPlaced.classList.add('complete');
+        stepPreparing.classList.add('active');
+        messageBox.textContent = 'Great news — the kitchen is preparing your meal now.';
+      } else if (normalized === 'ready') {
+        stepPlaced.classList.add('complete');
+        stepPreparing.classList.add('complete');
+        stepReady.classList.add('active');
+        messageBox.textContent = 'Waiting for Rider... Your order is ready for pickup!';
+      } else if (normalized === 'dispatched') {
+        stepPlaced.classList.add('complete');
+        stepPreparing.classList.add('complete');
+        stepReady.classList.add('complete');
+        stepOnTheWay.classList.add('active');
+        messageBox.innerHTML = '🏍️ Rider has picked up your meal! <span style="color:#38bdf8;">Rider is 2 mins away</span>';
+      } else if (normalized === 'completed' || normalized === 'served') {
+        stepPlaced.classList.add('complete');
+        stepPreparing.classList.add('complete');
+        stepReady.classList.add('complete');
+        stepOnTheWay.classList.add('complete');
+        messageBox.textContent = 'Your order is ready! Enjoy your meal!';
+      } else if (normalized === 'cancelled') {
+        // Hide progress bar and show cancellation message
+        document.getElementById('progress-bar').style.display = 'none';
+        document.getElementById('estimated-time').style.display = 'none';
+        messageBox.innerHTML = `
+          <div style="text-align: center; padding: 20px;">
+            <h3 style="color: #dc2626; margin-bottom: 16px; font-size: 1.2rem;">Order Cancelled</h3>
+            <p style="color: #dc2626; margin-bottom: 20px; line-height: 1.6;">
+              We are sorry! Haji's Restaurant is unable to fulfill your order at this time. Your order has been cancelled.
+            </p>
+            <button onclick="window.location.href='menu.html'" style="background: #dc2626; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;">
+              Back to Menu
+            </button>
+          </div>
+        `;
+      } else {
+        stepPlaced.classList.add('active');
+        messageBox.textContent = 'Waiting for order updates...';
+      }
+    }
+
+    function renderOrder(order) {
+      if (!order) return;
+      
+      // Reset cancelled styling
+      document.querySelector('.track-card').classList.remove('cancelled');
+      // Reset progress bar and timer visibility
+      document.getElementById('progress-bar').style.display = '';
+      document.getElementById('estimated-time').style.display = '';
+      
+      orderIdEl.textContent = orderId;
+      statusEl.textContent = String(order.status || 'new').toUpperCase();
+      createdAtEl.textContent = formatOrderDate(order.createdAt || order.timestamp);
+      customerNameEl.textContent = order.customerName || 'Guest';
+      customerAddressEl.textContent = order.address || 'N/A';
+
+      const items = Array.isArray(order.items) ? order.items : [];
+      if (!items.length) {
+        orderItemsEl.innerHTML = '<li>No items found</li>';
+      } else {
+        orderItemsEl.innerHTML = items.map((item) => `
+          <li>
+            <span>${item.name || 'Item'}</span>
+            <strong>${item.quantity || 1}×</strong>
+          </li>
+        `).join('');
+      }
+
+      orderTotalEl.innerHTML = `Total: <strong>${formatCurrency(order.totalAmount || order.total || 0)}</strong>`;
+      updateProgress(order.status);
+      const normalizedStatus = String(order.status || '').toLowerCase();
+      
+      // Handle cancelled status
+      if (normalizedStatus === 'cancelled') {
+        if (countdownInterval) clearInterval(countdownInterval);
+        countdownInterval = null;
+        // Apply cancelled styling
+        document.querySelector('.track-card').classList.add('cancelled');
+        return;
+      }
+      
+      if (normalizedStatus === 'completed' || normalizedStatus === 'served') {
+        if (countdownInterval) clearInterval(countdownInterval);
+        countdownInterval = null;
+        timeTextEl.textContent = 'Your order is ready!';
+        return;
+      }
+
+      // Update estimated time
+      const estimatedDeliveryTime = order.estimatedDeliveryTime;
+      if (estimatedDeliveryTime) {
+        const now = new Date();
+        if (typeof estimatedDeliveryTime === 'number') {
+          remainingSeconds = Math.max(0, Math.round(estimatedDeliveryTime * 60));
+        } else {
+          const deliveryTime = estimatedDeliveryTime.toDate ? estimatedDeliveryTime.toDate() : new Date(estimatedDeliveryTime);
+          remainingSeconds = Math.max(0, Math.ceil((deliveryTime - now) / 1000));
+        }
+        startCountdown();
+      } else {
+        if (countdownInterval) clearInterval(countdownInterval);
+        countdownInterval = null;
+        timeTextEl.textContent = 'Calculating prep time...';
+      }
+    }
+
+    function showError(message) {
+      messageBox.textContent = message;
+      messageBox.style.color = '#f8d7da';
+      messageBox.style.borderColor = '#f87171';
+      messageBox.style.background = 'rgba(248, 113, 113, 0.12)';
+    }
+
+    if (!orderId) {
+      showError('Order ID missing from the URL. Please go back and try again.');
+      loader.style.display = 'none';
+    } else {
+      const orderDoc = doc(db, 'orders', orderId);
+      onSnapshot(orderDoc, (docSnap) => {
+        if (!docSnap.exists()) {
+          showError('Order not found. Please verify your order ID.');
+          loader.style.display = 'none';
+          return;
+        }
+
+        const order = docSnap.data();
+        renderOrder(order);
+        loader.style.display = 'none';
+      }, (error) => {
+        console.error('Firestore tracking listener error:', error);
+        showError('Unable to load order status. Please refresh the page.');
+        loader.style.display = 'none';
+      });
+    }
+  </script>
+</body>
+</html>

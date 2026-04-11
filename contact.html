@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact - Haji's Restaurant</title>
+  <meta name="description" content="Contact Haji's Restaurant for orders, delivery, and support." />
+  <meta name="keywords" content="contact, Haji's restaurant, location, phone" />
+  <meta property="og:title" content="Contact - Haji's Restaurant" />
+  <meta property="og:description" content="Reach out for inquiries, reservations, or delivery assistance." />
+  <meta property="og:url" content="https://hajisrestaurant.pages.dev/contact.html" />
+  <link rel="canonical" href="https://hajisrestaurant.pages.dev/contact.html" />
+  <link rel="stylesheet" href="style.css">
+  <script src="scripts.js" type="module"></script>
+</head>
+<body>
+<nav class="navbar"><div class="container"><a href="index.html" class="nav-brand"><span class="red">HAJI'S</span><span class="sub">PAKISTANI & INDIAN FUSION</span></a><ul class="nav-links"><li><a href="index.html">Home</a></li><li><a href="menu.html">Menu</a></li><li><a href="order.html">Order Online</a></li><li><a href="gallery.html">Gallery</a></li><li><a href="catering.html">Catering</a></li><li><a href="reviews.html">Reviews</a></li><li><a href="about.html">About</a></li><li><a href="contact.html" class="active">Contact</a></li></ul><button class="nav-toggle" onclick="document.getElementById('mob-menu').classList.toggle('open')">☰</button></div><div id="mob-menu" class="nav-mobile"><a href="index.html">Home</a><a href="menu.html">Menu</a><a href="order.html">Order Online</a><a href="gallery.html">Gallery</a><a href="catering.html">Catering</a><a href="reviews.html">Reviews</a><a href="about.html">About</a><a href="contact.html">Contact</a></div></nav>
+
+<div class="pt-20">
+<section class="section">
+  <div class="container">
+    <p class="section-label text-center">Get In Touch</p>
+    <h1 class="section-title text-center">Contact Us</h1>
+    <div style="display:grid;gap:48px;max-width:1024px;margin:0 auto" class="grid-2">
+      <div style="display:flex;flex-direction:column;gap:24px">
+        <div class="info-card"><div class="info-icon">📞</div><div><h3>Call Us</h3><p class="info-text">+92 300 1234567</p><p class="info-sub">Mon–Sun, 11am–11pm</p></div></div>
+        <div class="info-card"><div class="info-icon">✉️</div><div><h3>Email</h3><p class="info-text">info@hajisrestaurant.pk</p><p class="info-sub">We reply within 24 hours</p></div></div>
+        <div class="info-card"><div class="info-icon">📍</div><div><h3>Visit Us</h3><p class="info-text">Main Boulevard, Lahore</p><p class="info-sub">Dine-in & Takeaway available</p></div></div>
+        <div class="info-card"><div class="info-icon">🕐</div><div><h3>Hours</h3><p class="info-text">11:00 AM – 11:00 PM</p><p class="info-sub">Open 7 days a week</p></div></div>
+      </div>
+      <div class="form-card">
+        <h3 style="font-size:1.5rem;font-weight:700;margin-bottom:16px">Send a Message</h3>
+        <input class="form-input" type="text" placeholder="Name" required>
+        <input class="form-input" type="email" placeholder="Email" required>
+        <input class="form-input" type="tel" placeholder="Phone">
+        <textarea class="form-input" rows="4" placeholder="Your message..." required></textarea>
+        <button class="btn-submit" onclick="alert('Message sent! We will get back to you soon.')">Send Message</button>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <p style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:12px"><span class="red">HAJI'S</span> <span class="gold">RESTAURANT</span></p>
+        <p style="color:var(--muted-fg);font-size:0.875rem">Pakistani and Indian Fusion Kitchen — Crafted with passion, served with love.</p>
+        <div class="footer-links">
+          <a href="#">Terms & Policies</a>
+          <a href="#">Accessibility Statement</a>
+        </div>
+      </div>
+      <div class="footer-contact">
+        <h4>Contact Info</h4>
+        <p><span class="icon">📞</span> (650) 507-3959</p>
+        <p><span class="icon">✉️</span> Hajisstaff@gmail.com</p>
+      </div>
+      <div>
+        <h4>Newsletter</h4>
+        <div class="newsletter-signup">
+          <input type="email" placeholder="Enter your email">
+          <button>Send</button>
+        </div>
+      </div>
+      <div class="footer-locations">
+        <h4>Locations</h4>
+        <ul>
+          <li>Hajis Restaurant Menlo Park</li>
+          <li>San Jose</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">© 2026 Haji's Restaurant. All rights reserved.</div>
+  </div>
+</footer>
+<a href="https://wa.me/923102041770" target="_blank" class="whatsapp-fab" aria-label="Chat on WhatsApp">📱</a>
+</body>
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyAHQes4SFyNRbQMS_wBuAfoZ85EBqEGmQA",
+    authDomain: "haji-s-restaurant.firebaseapp.com",
+    projectId: "haji-s-restaurant",
+    storageBucket: "haji-s-restaurant.firebasestorage.app",
+    messagingSenderId: "276986125044",
+    appId: "1:276986125044:web:4e8106d8528d1346779ca1",
+    measurementId: "G-LP14SXXV2L"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
+</html>
