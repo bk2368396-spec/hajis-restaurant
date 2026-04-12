@@ -4,6 +4,10 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Catering & Events - Haji's Restaurant</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .btn-signup { background: #dc2626; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; }
+    .btn-signup:hover { background: #b91c1c; }
+  </style>
   <meta name="description" content="Catering and events services at Haji's Restaurant for weddings, parties, and corporate gatherings.">
   <meta name="keywords" content="catering, events, party catering, Haji's Restaurant" />
   <meta property="og:title" content="Catering & Events - Haji's Restaurant" />
@@ -19,7 +23,7 @@
   <script src="scripts.js" type="module"></script>
 </head>
 <body>
-<nav class="navbar"><div class="container"><a href="index.html" class="nav-brand"><span class="red">HAJI'S</span><span class="sub">PAKISTANI & INDIAN FUSION</span></a><ul class="nav-links"><li><a href="index.html">Home</a></li><li><a href="menu.html">Menu</a></li><li><a href="order.html">Order Online</a></li><li><a href="gallery.html">Gallery</a></li><li><a href="catering.html" class="active">Catering</a></li><li><a href="reviews.html">Reviews</a></li><li><a href="about.html">About</a></li><li><a href="contact.html">Contact</a></li></ul><button class="nav-toggle" onclick="document.getElementById('mob-menu').classList.toggle('open')">☰</button></div><div id="mob-menu" class="nav-mobile"><a href="index.html">Home</a><a href="menu.html">Menu</a><a href="order.html">Order Online</a><a href="gallery.html">Gallery</a><a href="catering.html">Catering</a><a href="reviews.html">Reviews</a><a href="about.html">About</a><a href="contact.html">Contact</a></div></nav>
+<nav class="navbar"><div class="container"><a href="index.html" class="nav-brand"><span class="red">HAJI'S</span><span class="sub">PAKISTANI & INDIAN FUSION</span></a><ul class="nav-links"><li><a href="index.html">Home</a></li><li><a href="menu.html">Menu</a></li><li><a href="order.html">Order Online</a></li><li><a href="gallery.html">Gallery</a></li><li><a href="catering.html" class="active">Catering</a></li><li><a href="reviews.html">Reviews</a></li><li><a href="about.html">About</a></li><li><a href="contact.html">Contact</a></li><li id="nav-login"><a href="login.html">Login</a></li><li id="nav-signup"><a href="signup.html" class="btn-signup">Sign Up</a></li><li id="nav-logout" style="display:none;"><a href="#" onclick="logoutUser()">Logout</a></li></ul><button class="nav-toggle" onclick="document.getElementById('mob-menu').classList.toggle('open')">☰</button></div><div id="mob-menu" class="nav-mobile"><a href="index.html">Home</a><a href="menu.html">Menu</a><a href="order.html">Order Online</a><a href="gallery.html">Gallery</a><a href="catering.html">Catering</a><a href="reviews.html">Reviews</a><a href="about.html">About</a><a href="contact.html">Contact</a><a id="mob-login" href="login.html">Login</a><a id="mob-signup" href="signup.html" class="btn-signup">Sign Up</a><a id="mob-logout" href="#" onclick="logoutUser()" style="display:none;">Logout</a></div></nav>
 
 <div class="pt-20">
 <section class="section text-center">
@@ -106,6 +110,31 @@
     <div class="footer-bottom">© 2026 Haji's Restaurant. All rights reserved.</div>
   </div>
 </footer>
+<script type="module">
+  import { auth, onAuthStateChanged, signOut } from './firebase-config.js';
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      document.getElementById('nav-login').style.display = 'none';
+      document.getElementById('nav-signup').style.display = 'none';
+      document.getElementById('nav-logout').style.display = 'block';
+      document.getElementById('mob-login').style.display = 'none';
+      document.getElementById('mob-signup').style.display = 'none';
+      document.getElementById('mob-logout').style.display = 'block';
+    } else {
+      document.getElementById('nav-login').style.display = 'block';
+      document.getElementById('nav-signup').style.display = 'block';
+      document.getElementById('nav-logout').style.display = 'none';
+      document.getElementById('mob-login').style.display = 'block';
+      document.getElementById('mob-signup').style.display = 'block';
+      document.getElementById('mob-logout').style.display = 'none';
+    }
+  });
+  async function logoutUser() {
+    await signOut(auth);
+    window.location.href = 'index.html';
+  }
+  window.logoutUser = logoutUser;
+</script>
 </body>
 <script type="module">
   // Import the functions you need from the SDKs you need

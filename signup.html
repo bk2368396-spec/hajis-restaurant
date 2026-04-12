@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign Up - Haji's Restaurant</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { background: radial-gradient(circle at top, #1f1f1f,#050505); color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; min-height: 100vh; }
+    .signup-wrapper { display:flex; align-items:center; justify-content:center; padding:60px 15px; }
+    .signup-card { width:min(420px,100%); background:#0c0c0c; border:2px solid #d4af37; border-radius:14px; box-shadow:0 0 30px rgba(0,0,0,0.8); padding:26px; }
+    .signup-card h1 { color:#ffd700; margin-bottom:12px; font-size:1.8rem; letter-spacing:1.1px; }
+    .form-group { margin-bottom:14px; }
+    .form-group input { width:100%; padding:10px; border:1px solid #444; border-radius:8px; background:#101010; color:#fff; transition: border-color 0.3s, box-shadow 0.3s; }
+    .form-group input:focus { border-color:#d4af37; box-shadow:0 0 10px rgba(212, 175, 55, 0.5); outline:none; }
+    .btn-primary { width:100%; border:1px solid #ffd700; background:#ffd700; color:#111; font-weight:700; padding:10px; border-radius:8px; cursor:pointer; }
+    .error-text { color:#ff6b6b; margin-top:8px; display:none; }
+    .brand { text-align:center; margin-bottom:16px; }
+    .brand h2 { margin:0; color:#fff; font-size:1.2rem; }
+    .brand p { margin:6px 0 0; color:#ddd; font-size:0.9rem; }
+    .login-link { text-align:center; margin-top:16px; }
+    .login-link a { color:#ffd700; text-decoration:none; }
+    .login-link a:hover { text-decoration:underline; }
+    .google-btn { background: #4285f4; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; width: 100%; margin-bottom: 14px; font-weight: 700; }
+    .google-btn:hover { background: #3367d6; }
+    .or-divider { text-align: center; margin: 16px 0; color: #ddd; position: relative; }
+    .or-divider::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: #444; }
+    .or-divider span { background: #0c0c0c; padding: 0 10px; }
+  </style>
+  </style>
+</head>
+<body>
+  <div class="signup-wrapper">
+    <div class="signup-card">
+      <div class="brand">
+        <h2>Haji's Restaurant</h2>
+        <p>Join us for delicious Pakistani & Indian cuisine</p>
+      </div>
+      <h1>Sign Up</h1>
+      <button class="google-btn" onclick="signUpWithGoogle()">Continue with Google</button>
+      <div class="or-divider"><span>or</span></div>
+      <div class="form-group"><input id="user-name" type="text" placeholder="Full Name" autofocus /></div>
+      <div class="form-group"><input id="user-email" type="email" placeholder="Email" /></div>
+      <div class="form-group"><input id="user-password" type="password" placeholder="Password" /></div>
+      <div class="form-group"><input id="user-phone" type="tel" placeholder="Phone Number (Optional)" /></div>
+      <div class="form-group"><button class="btn-primary" onclick="signUpUser()">Sign Up</button></div>
+      <p id="signup-error" class="error-text">Error signing up!</p>
+      <div class="login-link">
+        <p>Already have an account? <a href="login.html">Login here</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="scripts.js" type="module"></script>
+  <script type="module">
+    import { auth, createUserWithEmailAndPassword, doc, setDoc, db, GoogleAuthProvider, signInWithPopup, setPersistence, browserSessionPersistence } from './firebase-config.js';
+
+    async function signUpUser() {
+      const name = (document.getElementById('user-name').value || '').trim();
+      const email = (document.getElementById('user-email').value || '').trim();
+      const password = (document.getElementById('user-password').value || '').trim();
+      const phone = (document.getElementById('user-phone').value || '').trim();
+      const err = document.getElementById('signup-error');
+      
+      if (!name || !email || !password) {
+        err.textContent = 'Name, Email, and Password are required!';
+        err.style.display = 'block';
+        return;
+      }
+      
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        
+        // Set persistence to SESSION so login is cleared when tab closes
+        await setPersistence(auth, browserSessionPersistence);
+        
+        // Save to Firestore 'customers' collection
+        await setDoc(doc(db, 'customers', user.uid), {
+          name: name,
+          phone: phone,
+          email: email,
+          createdAt: new Date()
+        });
+        
+        // Redirect to menu page
+        window.location.href = 'menu.html';
+      } catch (error) {
+        console.error('Signup error:', error);
+        err.textContent = 'Error signing up: ' + error.message;
+        err.style.display = 'block';
+      }
+    }
+
+    async function signUpWithGoogle() {
+      const provider = new GoogleAuthProvider();
+      const err = document.getElementById('signup-error');
+      
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        
+        // Set persistence to SESSION so login is cleared when tab closes
+        await setPersistence(auth, browserSessionPersistence);
+        
+        // Auto-capture from Google profile
+        const name = user.displayName || '';
+        const email = user.email || '';
+        const phone = (document.getElementById('user-phone').value || '').trim();
+        
+        // Save to Firestore 'customers' collection
+        await setDoc(doc(db, 'customers', user.uid), {
+          name: name,
+          phone: phone,
+          email: email,
+          createdAt: new Date()
+        });
+        
+        // Redirect to menu page
+        window.location.href = 'menu.html';
+      } catch (error) {
+        console.error('Google signup error:', error);
+        err.textContent = 'Error signing up with Google: ' + error.message;
+        err.style.display = 'block';
+      }
+    }
+
+    window.signUpUser = signUpUser;
+    window.signUpWithGoogle = signUpWithGoogle;
+  </script>
+
+</body>
+</html>

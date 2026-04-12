@@ -115,6 +115,18 @@ const initialMenu = [
   { id: 61, name: 'Suji Halwa', description: 'Semolina pudding', price: 6.99, image: 'Suji Halwa.jpg', category: 'Desserts' }
 ];
 
+function goToTrackOrder(event) {
+  if (event) {
+    event.preventDefault();
+  }
+  const lastOrderId = localStorage.getItem('lastOrderId');
+  if (!lastOrderId) {
+    alert('No active order found!');
+    return;
+  }
+  window.location.href = `track-order.html?orderId=${encodeURIComponent(lastOrderId)}`;
+}
+
 function normalizeMenu(menu) {
   const seen = new Set();
   return menu.reduce((acc, item) => {

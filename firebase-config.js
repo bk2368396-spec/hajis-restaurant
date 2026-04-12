@@ -6,6 +6,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getDatabase, ref, set, push, update, onValue, off, remove, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, getDocs, setDoc, getDoc, arrayUnion, arrayRemove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 // ⚠️ REPLACE WITH YOUR FIREBASE CONFIG
 const firebaseConfig = {
@@ -24,6 +25,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const db = getFirestore(app);
+const auth = getAuth(app);
 const databaseURL = firebaseConfig.databaseURL;
 
 // Test Firebase connection
@@ -40,6 +42,7 @@ export {
   database, 
   database as rtdb, 
   db,
+  auth,
   ref, 
   set, 
   push, 
@@ -62,7 +65,14 @@ export {
   getDoc,
   arrayUnion,
   arrayRemove,
-  serverTimestamp
+  serverTimestamp,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+  getAuth
 };
 
 // Make available globally for inline scripts/onClick handlers if needed
@@ -88,4 +98,9 @@ window.getDoc = getDoc;
 window.arrayUnion = arrayUnion;
 window.arrayRemove = arrayRemove;
 window.serverTimestamp = serverTimestamp;
+window.auth = auth;
+window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+window.signOut = signOut;
+window.onAuthStateChanged = onAuthStateChanged;
+window.getAuth = getAuth;
 

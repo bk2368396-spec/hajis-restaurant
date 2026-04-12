@@ -220,6 +220,7 @@
           <p><strong>Placed:</strong> <span id="order-created">Loading...</span></p>
           <p><strong>Customer:</strong> <span id="customer-name">Loading...</span></p>
           <p><strong>Delivery Address:</strong> <span id="customer-address">Loading...</span></p>
+          <p><strong>Note:</strong> <span id="customer-note">Loading...</span></p>
         </div>
         <div class="details-card">
           <h4>Order Items</h4>
@@ -240,7 +241,7 @@
   <script type="module">
     import { db, doc, onSnapshot } from './firebase-config.js';
 
-    const orderId = new URLSearchParams(window.location.search).get('orderId');
+    const orderId = new URLSearchParams(window.location.search).get('orderId') || localStorage.getItem('lastOrderId');
     const orderIdEl = document.getElementById('order-id');
     const statusEl = document.getElementById('order-status');
     const createdAtEl = document.getElementById('order-created');
@@ -268,7 +269,7 @@
     function startCountdown() {
       if (countdownInterval) clearInterval(countdownInterval);
       if (remainingSeconds <= 0) {
-        timeTextEl.textContent = 'Arriving soon!';
+        timeTextEl.textContent = 'Order Arrived!';
         return;
       }
       timeTextEl.textContent = `Arriving in ${formatCountdown(remainingSeconds)}`;
@@ -277,7 +278,7 @@
         if (remainingSeconds <= 0) {
           clearInterval(countdownInterval);
           countdownInterval = null;
-          timeTextEl.textContent = 'Arriving soon!';
+          timeTextEl.textContent = 'Order Arrived!';
         } else {
           timeTextEl.textContent = `Arriving in ${formatCountdown(remainingSeconds)}`;
         }
@@ -294,6 +295,26 @@
       return `$${Number(value || 0).toFixed(2)}`;
     }
 
+    function getRemainingSeconds(order) {
+      const prepTime = order.prepTime || 20; // minutes
+      const timestamp = order.timestamp || order.createdAt;
+      if (timestamp) {
+        const start = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+        const targetTime = new Date(start.getTime() + prepTime * 60000);
+        return Math.max(0, Math.ceil((targetTime - new Date()) / 1000));
+      }
+
+      // Fallback to startTime if available
+      const totalMinutes = order.totalMinutes != null ? Number(order.totalMinutes) : (order.prepTimeMinutes != null ? Number(order.prepTimeMinutes) : null);
+      if (order.startTime && totalMinutes != null) {
+        const start = order.startTime.toDate ? order.startTime.toDate() : new Date(order.startTime);
+        const targetTime = new Date(start.getTime() + totalMinutes * 60000);
+        return Math.max(0, Math.ceil((targetTime - new Date()) / 1000));
+      }
+
+      return null;
+    }
+
     function updateProgress(status) {
       const normalized = String(status || '').toLowerCase();
       stepPlaced.className = 'step';
@@ -301,48 +322,56 @@
       stepReady.className = 'step';
       stepOnTheWay.className = 'step';
 
-      if (normalized === 'new') {
-        stepPlaced.classList.add('active');
-        messageBox.textContent = 'Your order is placed and waiting to be prepared.';
-      } else if (normalized === 'preparing' || normalized === 'accepted' || normalized === 'in process') {
-        stepPlaced.classList.add('complete');
-        stepPreparing.classList.add('active');
-        messageBox.textContent = 'Great news — the kitchen is preparing your meal now.';
-      } else if (normalized === 'ready') {
-        stepPlaced.classList.add('complete');
-        stepPreparing.classList.add('complete');
-        stepReady.classList.add('active');
-        messageBox.textContent = 'Waiting for Rider... Your order is ready for pickup!';
-      } else if (normalized === 'dispatched') {
-        stepPlaced.classList.add('complete');
-        stepPreparing.classList.add('complete');
-        stepReady.classList.add('complete');
-        stepOnTheWay.classList.add('active');
-        messageBox.innerHTML = '🏍️ Rider has picked up your meal! <span style="color:#38bdf8;">Rider is 2 mins away</span>';
-      } else if (normalized === 'completed' || normalized === 'served') {
-        stepPlaced.classList.add('complete');
-        stepPreparing.classList.add('complete');
-        stepReady.classList.add('complete');
-        stepOnTheWay.classList.add('complete');
-        messageBox.textContent = 'Your order is ready! Enjoy your meal!';
-      } else if (normalized === 'cancelled') {
-        // Hide progress bar and show cancellation message
-        document.getElementById('progress-bar').style.display = 'none';
-        document.getElementById('estimated-time').style.display = 'none';
-        messageBox.innerHTML = `
-          <div style="text-align: center; padding: 20px;">
-            <h3 style="color: #dc2626; margin-bottom: 16px; font-size: 1.2rem;">Order Cancelled</h3>
-            <p style="color: #dc2626; margin-bottom: 20px; line-height: 1.6;">
-              We are sorry! Haji's Restaurant is unable to fulfill your order at this time. Your order has been cancelled.
-            </p>
-            <button onclick="window.location.href='menu.html'" style="background: #dc2626; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;">
-              Back to Menu
-            </button>
-          </div>
-        `;
-      } else {
-        stepPlaced.classList.add('active');
-        messageBox.textContent = 'Waiting for order updates...';
+      switch (normalized) {
+        case 'placed':
+        case 'new':
+          stepPlaced.classList.add('active');
+          messageBox.textContent = '⏰ Order in Process... Searching for Best Chef!';
+          break;
+        case 'preparing':
+          stepPlaced.classList.add('complete');
+          stepPreparing.classList.add('active');
+          messageBox.textContent = '🍳 Haji\'s Kitchen is preparing your delicious meal!';
+          break;
+        case 'ready':
+          stepPlaced.classList.add('complete');
+          stepPreparing.classList.add('complete');
+          stepReady.classList.add('active');
+          messageBox.textContent = '✅ Food is Ready! Waiting for Rider to arrive...';
+          break;
+        case 'dispatched':
+          stepPlaced.classList.add('complete');
+          stepPreparing.classList.add('complete');
+          stepReady.classList.add('complete');
+          stepOnTheWay.classList.add('active');
+          messageBox.textContent = '🏍️ Rider has picked up your meal and is on the way!';
+          break;
+        case 'completed':
+        case 'served':
+          stepPlaced.classList.add('complete');
+          stepPreparing.classList.add('complete');
+          stepReady.classList.add('complete');
+          stepOnTheWay.classList.add('complete');
+          messageBox.textContent = 'Your order is ready! Enjoy your meal!';
+          break;
+        case 'cancelled':
+          document.getElementById('progress-bar').style.display = 'none';
+          document.getElementById('estimated-time').style.display = 'none';
+          messageBox.innerHTML = `
+            <div style="text-align: center; padding: 20px;">
+              <h3 style="color: #dc2626; margin-bottom: 16px; font-size: 1.2rem;">❌ Sorry! Order has been cancelled.</h3>
+              <p style="color: #dc2626; margin-bottom: 20px; line-height: 1.6;">
+                We are sorry! Haji's Restaurant is unable to fulfill your order at this time. Your order has been cancelled.
+              </p>
+              <button onclick="window.location.href='menu.html'" style="background: #dc2626; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;">
+                Back to Menu
+              </button>
+            </div>
+          `;
+          break;
+        default:
+          stepPlaced.classList.add('active');
+          messageBox.textContent = 'Waiting for order updates...';
       }
     }
 
@@ -360,6 +389,7 @@
       createdAtEl.textContent = formatOrderDate(order.createdAt || order.timestamp);
       customerNameEl.textContent = order.customerName || 'Guest';
       customerAddressEl.textContent = order.address || 'N/A';
+      document.getElementById('customer-note').textContent = order.customerNote || 'No notes';
 
       const items = Array.isArray(order.items) ? order.items : [];
       if (!items.length) {
@@ -393,22 +423,22 @@
         return;
       }
 
-      // Update estimated time
-      const estimatedDeliveryTime = order.estimatedDeliveryTime;
-      if (estimatedDeliveryTime) {
-        const now = new Date();
-        if (typeof estimatedDeliveryTime === 'number') {
-          remainingSeconds = Math.max(0, Math.round(estimatedDeliveryTime * 60));
+      const remaining = getRemainingSeconds(order);
+      if (remaining != null) {
+        remainingSeconds = remaining;
+        if (remainingSeconds <= 0) {
+          if (countdownInterval) clearInterval(countdownInterval);
+          countdownInterval = null;
+          timeTextEl.textContent = 'Order Arrived!';
         } else {
-          const deliveryTime = estimatedDeliveryTime.toDate ? estimatedDeliveryTime.toDate() : new Date(estimatedDeliveryTime);
-          remainingSeconds = Math.max(0, Math.ceil((deliveryTime - now) / 1000));
+          startCountdown();
         }
-        startCountdown();
-      } else {
-        if (countdownInterval) clearInterval(countdownInterval);
-        countdownInterval = null;
-        timeTextEl.textContent = 'Calculating prep time...';
+        return;
       }
+
+      if (countdownInterval) clearInterval(countdownInterval);
+      countdownInterval = null;
+      timeTextEl.textContent = 'Calculating prep time...';
     }
 
     function showError(message) {

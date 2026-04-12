@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Login - Haji's Restaurant</title>
+  <title>Login - Haji's Restaurant</title>
   <link rel="stylesheet" href="style.css" />
   <style>
     body { background: radial-gradient(circle at top, #1f1f1f,#050505); color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; min-height: 100vh; }
@@ -11,68 +11,91 @@
     .login-card { width:min(420px,100%); background:#0c0c0c; border:2px solid #d4af37; border-radius:14px; box-shadow:0 0 30px rgba(0,0,0,0.8); padding:26px; }
     .login-card h1 { color:#ffd700; margin-bottom:12px; font-size:1.8rem; letter-spacing:1.1px; }
     .form-group { margin-bottom:14px; }
-    .form-group input { width:100%; padding:10px; border:1px solid #444; border-radius:8px; background:#101010; color:#fff; }
+    .form-group input { width:100%; padding:10px; border:1px solid #444; border-radius:8px; background:#101010; color:#fff; transition: border-color 0.3s, box-shadow 0.3s; }
+    .form-group input:focus { border-color:#d4af37; box-shadow:0 0 10px rgba(212, 175, 55, 0.5); outline:none; }
     .btn-primary { width:100%; border:1px solid #ffd700; background:#ffd700; color:#111; font-weight:700; padding:10px; border-radius:8px; cursor:pointer; }
     .error-text { color:#ff6b6b; margin-top:8px; display:none; }
     .brand { text-align:center; margin-bottom:16px; }
     .brand h2 { margin:0; color:#fff; font-size:1.2rem; }
     .brand p { margin:6px 0 0; color:#ddd; font-size:0.9rem; }
+    .login-link { text-align:center; margin-top:16px; }
+    .login-link a { color:#ffd700; text-decoration:none; }
+    .login-link a:hover { text-decoration:underline; }
+    .google-btn { background: #4285f4; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; width: 100%; margin-bottom: 14px; font-weight: 700; }
+    .google-btn:hover { background: #3367d6; }
+    .or-divider { text-align: center; margin: 16px 0; color: #ddd; position: relative; }
+    .or-divider::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: #444; }
+    .or-divider span { background: #0c0c0c; padding: 0 10px; }
   </style>
 </head>
 <body>
   <div class="login-wrapper">
     <div class="login-card">
       <div class="brand">
-        <h2>Haji's Restaurant Admin</h2>
-        <p>Secure access to orders and customer management</p>
+        <h2>Haji's Restaurant</h2>
+        <p>Welcome back! Sign in to continue ordering</p>
       </div>
       <h1>Sign in</h1>
-      <div class="form-group"><input id="admin-username" type="text" placeholder="Username" value="Danish" autofocus /></div>
-      <div class="form-group"><input id="admin-password" type="password" placeholder="Password" value="Haji123" /></div>
-      <div class="form-group"><button class="btn-primary" onclick="loginAdmin()">Login</button></div>
-      <p id="login-error" class="error-text">Invalid credentials. Use Danish / Haji123.</p>
+      <button class="google-btn" onclick="loginWithGoogle()">Continue with Google</button>
+      <div class="or-divider"><span>or</span></div>
+      <div class="form-group"><input id="admin-email" type="email" placeholder="Email" autofocus /></div>
+      <div class="form-group"><input id="admin-password" type="password" placeholder="Password" /></div>
+      <div class="form-group"><button class="btn-primary" onclick="loginUser()">Login</button></div>
+      <p id="login-error" class="error-text">Ghalat Email ya Password!</p>
+      <div class="login-link">
+        <p>Don't have an account? <a href="signup.html">Sign up here</a></p>
+      </div>
     </div>
   </div>
 
   <script src="scripts.js" type="module"></script>
-  <script>
-  function loginAdmin() {
-    const user = (document.getElementById('admin-username').value || '').trim();
-    const pass = (document.getElementById('admin-password').value || '').trim();
-    const err = document.getElementById('login-error');
-    if (user === 'Danish' && pass === 'Haji123') {
-      sessionStorage.setItem('isAdminLoggedIn', 'true');
-      sessionStorage.setItem('isLoggedIn', 'true');
-      localStorage.removeItem('isAdminLoggedIn');
-      localStorage.removeItem('isLoggedIn');
-      window.location.href = 'admin.html';
-      return;
-    }
-    err.style.display = 'block';
-  }
-  </script>
   <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+    import { auth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, setPersistence, browserSessionPersistence } from './firebase-config.js';
 
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyAHQes4SFyNRbQMS_wBuAfoZ85EBqEGmQA",
-    authDomain: "haji-s-restaurant.firebaseapp.com",
-    projectId: "haji-s-restaurant",
-    storageBucket: "haji-s-restaurant.firebasestorage.app",
-    messagingSenderId: "276986125044",
-    appId: "1:276986125044:web:4e8106d8528d1346779ca1",
-    measurementId: "G-LP14SXXV2L"
-  };
+    async function loginUser() {
+      const email = (document.getElementById('admin-email').value || '').trim();
+      const password = (document.getElementById('admin-password').value || '').trim();
+      const err = document.getElementById('login-error');
+      
+      if (!email || !password) {
+        err.textContent = 'Email aur Password dono zaroori hain!';
+        err.style.display = 'block';
+        return;
+      }
+      
+      try {
+        // Set persistence to SESSION so login is cleared when tab closes
+        await setPersistence(auth, browserSessionPersistence);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        // Login successful
+        window.location.href = 'menu.html';
+      } catch (error) {
+        console.error('Login error:', error);
+        err.textContent = 'Ghalat Email ya Password!';
+        err.style.display = 'block';
+      }
+    }
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-</script>
+    async function loginWithGoogle() {
+      const provider = new GoogleAuthProvider();
+      const err = document.getElementById('login-error');
+      
+      try {
+        // Set persistence to SESSION so login is cleared when tab closes
+        await setPersistence(auth, browserSessionPersistence);
+        const result = await signInWithPopup(auth, provider);
+        // Login successful
+        window.location.href = 'menu.html';
+      } catch (error) {
+        console.error('Google login error:', error);
+        err.textContent = 'Error logging in with Google: ' + error.message;
+        err.style.display = 'block';
+      }
+    }
+
+    window.loginUser = loginUser;
+    window.loginWithGoogle = loginWithGoogle;
+  </script>
+
 </body>
 </html>

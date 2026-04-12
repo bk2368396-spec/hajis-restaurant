@@ -132,6 +132,7 @@
     }
 
     .modal {
+      display: none;
       position: fixed;
       z-index: 1000;
       left: 0;
@@ -285,8 +286,8 @@
   <div id="admin-login" class="admin-overlay">
     <div class="login-card">
       <h1>Haji's Admin Login</h1>
-      <div class="form-group"><input id="admin-username" type="text" placeholder="Username" value="Danish" /></div>
-      <div class="form-group"><input id="admin-password" type="password" placeholder="Password" value="Haji123" /></div>
+      <div class="form-group"><input id="admin-email" type="email" placeholder="Email" /></div>
+      <div class="form-group"><input id="admin-password" type="password" placeholder="Password" /></div>
       <div class="form-group"><button id="loginBtn" class="btn btn-primary" onclick="loginAdmin()">Login</button></div>
       <p id="admin-error" class="error"></p>
     </div>
@@ -302,6 +303,7 @@
       <button class="nav-btn" id="nav-reviews" onclick="switchTab('reviews')">Reviews</button>
       <button class="nav-btn" id="nav-help" onclick="switchTab('help')">Customer Help <span id="help-badge"
           class="badge" style="display:none;">●</span></button>
+      <button class="nav-btn" id="nav-map" onclick="switchTab('map')">Location Map</button>
       <button class="nav-btn" id="nav-security" onclick="switchTab('security')">Security</button>
       <button class="btn btn-secondary" onclick="resetMenu()">Reset Menu</button>
       <button class="btn btn-secondary" style="margin-left:auto;" onclick="logoutAdmin()">Logout</button>
@@ -433,6 +435,13 @@
       <h2>Customer Help Messages</h2>
       <div class="scroll-area" id="help-messages-container"></div>
     </div>
+
+    <div id="map-section" class="section">
+      <h2>Order Location Map</h2>
+      <div id="map-container" style="height: 400px; background: #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #ccc;">
+        Select an order to view locations
+      </div>
+    </div>
   </section>
 
   <!-- Chat Modal -->
@@ -454,9 +463,21 @@
     const ADMIN_LOGIN_KEY = 'isAdminLoggedIn';
 
     let currentChatIndex = null;
+    let currentChatCustomerId = null;
+
+    function openChat(customerId) {
+      currentChatCustomerId = customerId || null;
+      currentChatIndex = null;
+      document.querySelector('#chat-modal h3').textContent = `Chat with ${customerId || 'Customer'}`;
+      document.getElementById('chat-history').innerHTML = '<p style="color:#ddd; margin:0;">Chat opened. Select a conversation or reply to start.</p>';
+      document.getElementById('chat-reply-input').value = '';
+      document.getElementById('chat-modal').style.display = 'block';
+    }
+
+    window.openChat = openChat;
 
     function setActiveSection(sectionKey) {
-      const sections = ['orders', 'completed', 'menu', 'add', 'feedback', 'help', 'security'];
+      const sections = ['orders', 'completed', 'menu', 'add', 'feedback', 'help', 'map', 'security'];
       sections.forEach((key) => {
         const section = document.getElementById(`${key}-section`);
         const navBtn = document.getElementById(`nav-${key}`);
@@ -495,81 +516,48 @@
       }
     }
 
-    function loginAdmin() {
-      const user = (document.getElementById('admin-username').value || '').trim();
+    async function loginAdmin() {
+      const email = (document.getElementById('admin-email').value || '').trim();
       const pass = (document.getElementById('admin-password').value || '').trim();
       const adminError = document.getElementById('admin-error');
 
-      if (user === 'Danish' && pass === 'Haji123') {
-        sessionStorage.setItem('isLoggedIn', 'true');
-        sessionStorage.setItem(ADMIN_LOGIN_KEY, 'true');
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem(ADMIN_LOGIN_KEY);
-        // Clear old localStorage orders to ensure only Firebase data is shown
-        localStorage.removeItem('hajis_orders');
-        localStorage.removeItem('hajis_restaurant_orders');
-        document.getElementById('admin-login').style.display = 'none';
-        document.getElementById('admin-dashboard').style.display = 'block';
-        console.log('✅ Dashboard visible - setting active section to orders');
-        setActiveSection('orders');
-        // Verify orders-section is visible
-        setTimeout(() => {
-          const ordersSection = document.getElementById('orders-section');
-          console.log('📍 Orders-section has active class:', ordersSection?.classList.contains('active'));
-          console.log('📍 Orders-section display:', window.getComputedStyle(ordersSection).display);
-          console.log('📍 Orders-feed element visible:', document.getElementById('orders-feed') !== null);
-        }, 100);
-        displayMenuManager();
-        // IMPORTANT: Do NOT call startAdminOrdersPolling() - Firebase real-time listener handles updates
-        updateHelpBadge();
-        // Render help messages once on login
-        renderHelpMessages();
+      if (!email || !pass) {
+        adminError.textContent = 'Email aur Password dono zaroori hain!';
+        adminError.style.display = 'block';
         return;
       }
 
-      adminError.textContent = 'Wrong Password. Use Danish / Haji123';
-      adminError.style.display = 'block';
-    }
-
-    function checkLoginState() {
-      const loggedIn = sessionStorage.getItem('isLoggedIn') === 'true' || sessionStorage.getItem(ADMIN_LOGIN_KEY) === 'true';
-      if (loggedIn) {
-        sessionStorage.setItem(ADMIN_LOGIN_KEY, 'true');
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem(ADMIN_LOGIN_KEY);
-        document.getElementById('admin-login').style.display = 'none';
-        document.getElementById('admin-dashboard').style.display = 'block';
-        console.log('✅ Dashboard visible on page load - setting active section to orders');
-        setActiveSection('orders');
-        // Verify orders-section is visible
-        setTimeout(() => {
-          const ordersSection = document.getElementById('orders-section');
-          console.log('📍 Orders-section has active class:', ordersSection?.classList.contains('active'));
-          console.log('📍 Orders-section display:', window.getComputedStyle(ordersSection).display);
-          console.log('📍 Orders-feed element visible:', document.getElementById('orders-feed') !== null);
-        }, 100);
-        displayMenuManager();
-        // IMPORTANT: Do NOT call startAdminOrdersPolling() - Firebase real-time listener handles updates
-        updateHelpBadge();
-        // Render help messages once on page load
-        renderHelpMessages();
-      } else {
-        sessionStorage.removeItem('isLoggedIn');
-        sessionStorage.removeItem(ADMIN_LOGIN_KEY);
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem(ADMIN_LOGIN_KEY);
-        document.getElementById('admin-login').style.display = 'block';
-        document.getElementById('admin-dashboard').style.display = 'none';
+      try {
+        // Set persistence to SESSION so login is cleared when tab closes
+        await setPersistence(auth, browserSessionPersistence);
+        const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+        console.log('✅ Admin logged in successfully');
+        // Clear old localStorage orders to ensure only Firebase data is shown
+        localStorage.removeItem('hajis_orders');
+        localStorage.removeItem('hajis_restaurant_orders');
+        // onAuthStateChanged will handle showing the dashboard
+      } catch (error) {
+        console.error('❌ Login error:', error);
+        adminError.textContent = 'Ghalat Email ya Password!';
+        adminError.style.display = 'block';
       }
     }
 
-    function logoutAdmin() {
+
+
+    async function logoutAdmin() {
+      try {
+        await signOut(auth);
+        console.log('✅ Admin logged out successfully');
+        window.location.href = 'login.html';
+      } catch (error) {
+        console.error('❌ Error signing out:', error);
+      }
+      // Clear session storage as backup
       sessionStorage.removeItem('isLoggedIn');
       sessionStorage.removeItem(ADMIN_LOGIN_KEY);
       localStorage.removeItem('isLoggedIn');
       localStorage.removeItem(ADMIN_LOGIN_KEY);
-      document.getElementById('admin-login').style.display = 'block';
-      document.getElementById('admin-dashboard').style.display = 'none';
     }
 
     window.addEventListener('storage', (event) => {
@@ -664,6 +652,7 @@
 
     function openChatModal(index) {
       currentChatIndex = index;
+      currentChatCustomerId = null;
       const messages = JSON.parse(localStorage.getItem('hajis_customer_help') || '[]');
       const msg = messages[index];
       document.querySelector('#chat-modal h3').textContent = `Chat with ${msg.name}`;
@@ -674,6 +663,7 @@
     function closeChatModal() {
       document.getElementById('chat-modal').style.display = 'none';
       currentChatIndex = null;
+      currentChatCustomerId = null;
     }
 
     function displayChatHistory(index) {
@@ -717,15 +707,11 @@
         location.reload();
       }
     };
-
-    window.addEventListener('DOMContentLoaded', () => {
-      checkLoginState();
-      setupAddNewDishForm();
-    });
   </script>
   <script type="module">
     import {
       db,
+      auth,
       collection,
       onSnapshot,
       query,
@@ -733,8 +719,36 @@
       orderBy,
       updateDoc,
       doc,
-      getDoc
+      getDoc,
+      onAuthStateChanged,
+      signOut,
+      signInWithEmailAndPassword,
+      getAuth,
+      serverTimestamp
     } from './firebase-config.js';
+
+    // Check Firebase Auth state
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // User is signed in
+        document.getElementById('admin-login').style.display = 'none';
+        document.getElementById('admin-dashboard').style.display = 'block';
+        console.log('✅ Dashboard visible - Firebase user authenticated');
+        setActiveSection('orders');
+        setTimeout(() => {
+          const ordersSection = document.getElementById('orders-section');
+          console.log('📍 Orders-section has active class:', ordersSection?.classList.contains('active'));
+          console.log('📍 Orders-section display:', window.getComputedStyle(ordersSection).display);
+          console.log('📍 Orders-feed element visible:', document.getElementById('orders-feed') !== null);
+        }, 100);
+        displayMenuManager();
+        updateHelpBadge();
+        renderHelpMessages();
+      } else {
+        // User is signed out, force login
+        window.location.href = 'login.html';
+      }
+    });
 
     const ORDERS_COLLECTION = 'orders';
     const ordersCollection = collection(db, ORDERS_COLLECTION);
@@ -841,9 +855,44 @@
       container.innerHTML = orders.map((order) => renderOrderCard(order, columnType)).join('');
     }
 
+    function formatCountdown(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function getOrderRemainingSeconds(order) {
+      const totalMinutes = order.totalMinutes != null ? Number(order.totalMinutes)
+        : (order.prepTimeMinutes != null ? Number(order.prepTimeMinutes) : null);
+      if (order.startTime && totalMinutes != null) {
+        const start = order.startTime.toDate ? order.startTime.toDate() : new Date(order.startTime);
+        const endTime = new Date(start.getTime() + totalMinutes * 60000);
+        return Math.max(0, Math.ceil((endTime - new Date()) / 1000));
+      }
+
+      const estimatedDeliveryTime = order.estimatedDeliveryTime;
+      if (estimatedDeliveryTime) {
+        const now = new Date();
+        if (typeof estimatedDeliveryTime === 'number') {
+          return Math.max(0, Math.round(estimatedDeliveryTime * 60));
+        }
+        const endTime = estimatedDeliveryTime.toDate ? estimatedDeliveryTime.toDate() : new Date(estimatedDeliveryTime);
+        return Math.max(0, Math.ceil((endTime - now) / 1000));
+      }
+
+      return null;
+    }
+
+    function getOrderRemainingLabel(order) {
+      const remainingSeconds = getOrderRemainingSeconds(order);
+      if (remainingSeconds == null) return '';
+      if (remainingSeconds <= 0) return 'Order Arrived';
+      return `Customer timer: ${formatCountdown(remainingSeconds)}`;
+    }
+
     function renderOrderCard(order, columnType) {
       const timeLabel = getTimeElapsed(order.createdAt || order.timestamp);
-      const notes = order.notes || order.customerNotes || order.specialInstructions || 'No notes';
+      const notes = order.customerNote || order.notes || order.customerNotes || order.specialInstructions || 'No notes';
       const items = Array.isArray(order.items) ? order.items : [];
       const itemsHtml = items.length
         ? items.map((item) => `<li class="leading-6 text-slate-600">${item.quantity || 1}× ${item.name}</li>`).join('')
@@ -913,6 +962,7 @@
                 </div>
               </div>
               ` : ''}
+              ${getOrderRemainingLabel(order) ? `<p class="text-sm text-slate-500 mt-3">${getOrderRemainingLabel(order)}</p>` : ''}
               ${isReady ? `
               <div class="mt-3">
                 <p class="text-sm uppercase tracking-[0.2em] text-slate-500">Assign Rider</p>
@@ -998,14 +1048,15 @@
           return 20;
         })();
         const prepMinutes = Math.max(5, Math.min(120, currentPrepMinutes));
-        const estimatedDeliveryTime = new Date(Date.now() + prepMinutes * 60000).toISOString();
 
         await updateDoc(orderRef, {
           status: 'preparing',
           startedAt: new Date().toISOString(),
+          startTime: serverTimestamp(),
+          totalMinutes: prepMinutes,
           updatedAt: new Date().toISOString(),
           prepTimeMinutes: prepMinutes,
-          estimatedDeliveryTime
+          estimatedDeliveryTime: new Date(Date.now() + prepMinutes * 60000).toISOString()
         });
       } catch (err) {
         console.error('❌ Failed to start order:', err);
@@ -1095,6 +1146,7 @@
 
         if (String(orderData.status || '').toLowerCase() === 'preparing') {
           updatePayload.estimatedDeliveryTime = new Date(Date.now() + newMinutes * 60000).toISOString();
+          updatePayload.totalMinutes = newMinutes;
         }
 
         await updateDoc(orderRef, updatePayload);
@@ -1269,7 +1321,7 @@
         }
 
         return `
-          <div class="item-box" style="border-color: ${borderColor};">
+          <div class="item-box" style="border-color: ${borderColor}; cursor:pointer;" onclick="showOrderOnMap('${order.id}', ${JSON.stringify(order).replace(/"/g, '&quot;')})">
             <div class="item-box-title">
               <strong>${order.customerName || 'Customer'}</strong>
               <span style="color: ${textColor}; font-weight:bold;">
@@ -1288,8 +1340,11 @@
             <div style="margin:8px 0; font-size:0.85rem; color:#888;">
               ${new Date(order.timestamp).toLocaleString()}
             </div>
-            <button class="btn btn-primary btn-tiny" onclick="window.acceptFirestoreOrder('${order.id}')">Accept</button>
-            <button class="btn btn-cancel btn-tiny" onclick="window.cancelFirestoreOrder('${order.id}')">Cancel</button>
+            <div style="margin:8px 0; font-size:0.85rem; color:#ff6b6b;">
+              Risk: ${order.riskLevel || 'Normal'}
+            </div>
+            <button class="btn btn-primary btn-tiny" onclick="event.stopPropagation(); window.acceptFirestoreOrder('${order.id}')">Accept</button>
+            <button class="btn btn-cancel btn-tiny" onclick="event.stopPropagation(); window.cancelFirestoreOrder('${order.id}')">Cancel</button>
           </div>
         `;
       }).join('');
@@ -1415,6 +1470,44 @@
         console.error('Error cancelling order:', err);
         alert('Error cancelling order');
       });
+    };
+
+    window.showOrderOnMap = function(orderId, order) {
+      const mapContainer = document.getElementById('map-container');
+      if (!mapContainer) return;
+
+      // Switch to map tab
+      setActiveSection('map');
+
+      let mapHTML = '<p style="color:#ccc;">Unable to load map. Check locations.</p>';
+
+      if (order.currentLocation && order.currentLocation.lat && order.currentLocation.lng) {
+        // Customer's current location
+        const customerLat = order.currentLocation.lat;
+        const customerLng = order.currentLocation.lng;
+
+        // For delivery address, we need to geocode it. For now, assume Karachi center as fallback
+        const deliveryLat = 24.8607; // Karachi lat
+        const deliveryLng = 67.0011; // Karachi lng
+
+        // Create Google Maps embed URL with two markers
+        const apiKey = 'YOUR_GOOGLE_MAPS_API_KEY'; // Replace with actual API key
+        const mapUrl = `https://www.google.com/maps/embed/v1/view?key=${apiKey}&center=${customerLat},${customerLng}&zoom=12&markers=color:red%7C${customerLat},${customerLng}&markers=color:blue%7C${deliveryLat},${deliveryLng}`;
+
+        mapHTML = `
+          <iframe width="100%" height="100%" frameborder="0" style="border:0" 
+            src="${mapUrl}" allowfullscreen>
+          </iframe>
+          <div style="position:absolute; top:10px; left:10px; background:rgba(0,0,0,0.7); color:#fff; padding:5px; border-radius:5px; font-size:0.8rem;">
+            🔴 Red: Customer Location<br/>
+            🔵 Blue: Delivery Address
+          </div>
+        `;
+      } else {
+        mapHTML = '<p style="color:#ccc;">No GPS location available for this order.</p>';
+      }
+
+      mapContainer.innerHTML = mapHTML;
     };
 
     window.openChatWithCustomer = function(chatId) {

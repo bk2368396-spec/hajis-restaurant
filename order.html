@@ -4,6 +4,10 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Order Online - Haji's Restaurant</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .btn-signup { background: #dc2626; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; }
+    .btn-signup:hover { background: #b91c1c; }
+  </style>
   <meta name="description" content="Place your order online at Haji's Restaurant with delivery details and payment options.">
   <meta name="keywords" content="order online, delivery, Haji's Restaurant, checkout">
   <meta property="og:title" content="Order Online - Haji's Restaurant" />
@@ -118,20 +122,119 @@
       }
     }
 
+    // Get current location using Geolocation API
+    window.getCurrentLocation = function() {
+      const btn = document.getElementById('get-location-btn');
+      const display = document.getElementById('current-location-display');
+      const latInput = document.getElementById('current-lat');
+      const lngInput = document.getElementById('current-lng');
+      
+      btn.textContent = 'Getting Location...';
+      btn.disabled = true;
+      
+      if (!navigator.geolocation) {
+        display.textContent = 'Geolocation is not supported by this browser.';
+        btn.textContent = 'Get My Current Location';
+        btn.disabled = false;
+        return;
+      }
+      
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          
+          latInput.value = lat;
+          lngInput.value = lng;
+          display.textContent = `Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+          btn.textContent = 'Location Updated';
+          btn.disabled = false;
+          
+          // Check distance if manual address is filled
+          checkDistance();
+        },
+        (error) => {
+          let errorMsg = 'Unable to retrieve your location.';
+          switch(error.code) {
+            case error.PERMISSION_DENIED:
+              errorMsg = 'Location access denied. Please enable location permissions.';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMsg = 'Location information is unavailable.';
+              break;
+            case error.TIMEOUT:
+              errorMsg = 'Location request timed out.';
+              break;
+          }
+          display.textContent = errorMsg;
+          btn.textContent = 'Get My Current Location';
+          btn.disabled = false;
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000 // 5 minutes
+        }
+      );
+    };
+
+    // Check distance between current location and delivery address
+    function checkDistance() {
+      const lat = document.getElementById('current-lat').value;
+      const lng = document.getElementById('current-lng').value;
+      const house = document.getElementById('house-number').value.trim();
+      const street = document.getElementById('street-address').value.trim();
+      
+      if (!lat || !lng || !house || !street) return;
+      
+      // For simplicity, assume Karachi area and check if coordinates are within reasonable bounds
+      // In a real app, geocode the address and calculate Haversine distance
+      const karachiLat = 24.8607;
+      const karachiLng = 67.0011;
+      const distanceFromKarachi = getDistance(lat, lng, karachiLat, karachiLng);
+      
+      // If current location is far from Karachi (restaurant area), or if address seems incomplete
+      const warning = document.getElementById('distance-warning');
+      if (distanceFromKarachi > 50) { // 50km from Karachi center
+        warning.style.display = 'block';
+      } else {
+        warning.style.display = 'none';
+      }
+    }
+
+    // Haversine distance calculation
+    function getDistance(lat1, lng1, lat2, lng2) {
+      const R = 6371; // Earth's radius in km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLng/2) * Math.sin(dLng/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
     window.placeOrder = async function placeOrder() {
       console.log('1. [placeOrder] Button clicked.');
       const nameField = document.getElementById('customer-name');
       const phoneField = document.getElementById('customer-phone');
-      const addressField = document.getElementById('customer-address');
+      const houseField = document.getElementById('house-number');
+      const streetField = document.getElementById('street-address');
+      const landmarkField = document.getElementById('landmark');
       const name = nameField.value.trim();
       const phone = phoneField.value.trim();
-      const address = addressField.value.trim();
+      const house = houseField.value.trim();
+      const street = streetField.value.trim();
+      const landmark = landmarkField.value.trim();
+      const currentLat = document.getElementById('current-lat').value;
+      const currentLng = document.getElementById('current-lng').value;
       const errorElement = document.getElementById('order-error');
 
       errorElement.style.display = 'none';
       clearFieldValidation(nameField, 'customer-name-error');
       clearFieldValidation(phoneField, 'customer-phone-error');
-      clearFieldValidation(addressField, 'customer-address-error');
+      clearFieldValidation(houseField, 'manual-address-error');
+      clearFieldValidation(streetField, 'manual-address-error');
 
       let valid = true;
 
@@ -145,8 +248,8 @@
         valid = false;
       }
 
-      if (address.length < 15) {
-        setFieldInvalid(addressField, 'customer-address-error', 'Please enter an address at least 15 characters long.');
+      if (!house || !street) {
+        setFieldInvalid(houseField, 'manual-address-error', 'Please enter at least house number and street address.');
         valid = false;
       }
 
@@ -154,6 +257,18 @@
         errorElement.textContent = 'Please fix the highlighted fields before placing your order.';
         errorElement.style.display = 'block';
         return;
+      }
+
+      // Combine address
+      const fullAddress = `${house}, ${street}${landmark ? ', ' + landmark : ''}`;
+
+      // Check distance if both locations available
+      let isHighRisk = false;
+      if (currentLat && currentLng) {
+        // For simplicity, assume Karachi area, check if distance > 10km
+        // In real app, geocode delivery address and calculate
+        // For now, just flag if no landmark or something
+        isHighRisk = !landmark || landmark.length < 3; // simple heuristic
       }
 
       // Show processing state
@@ -178,13 +293,20 @@
         const orderData = {
           customerName: name,
           phone: phone,
-          address: address,
+          address: fullAddress,
+          houseNumber: house,
+          streetAddress: street,
+          landmark: landmark,
+          currentLocation: currentLat && currentLng ? { lat: parseFloat(currentLat), lng: parseFloat(currentLng) } : null,
           items: cart,
           totalAmount: total,
           status: 'new',
           timestamp: serverTimestamp(),
           createdAt: serverTimestamp(),
-          paymentMethod: document.getElementById('payment-cash').classList.contains('active') ? 'Cash' : 'Card'
+          paymentMethod: document.getElementById('payment-cash').classList.contains('active') ? 'Cash' : 'Card',
+          customerNote: document.getElementById('orderNote').value.trim(),
+          prepTime: 20, // default 20 minutes
+          riskLevel: isHighRisk ? 'High Risk' : 'Normal'
         };
 
         console.log('Saving Order to Firestore orders:', orderData);
@@ -200,19 +322,20 @@
         const newOrderRef = push(ref(database, 'orders'));
         await set(newOrderRef, orderData);
         
-        // **CRITICAL: Clear cart immediately after successful order**
+        // Persist the last placed order ID so TRACK ORDER can redirect correctly
+        localStorage.setItem('lastOrderId', finalOrderId);
+        
+        // Clear cart after successful order
         localStorage.removeItem('cart');
         console.log('✅ Cart cleared from localStorage');
         
         // Show success
         document.getElementById('processing-heading').textContent = 'Order Placed Successfully! 🎉';
         document.getElementById('place-order-btn').textContent = 'Order Placed';
-        
-        alert('Order Placed Successfully! Your order ID is: ' + finalOrderId);
         showNotification('Order Placed! Redirecting you to order tracking.', 'success');
         
         setTimeout(() => {
-          window.location.href = 'track-order.html?orderId=' + finalOrderId;
+          window.location.href = 'track-order.html?orderId=' + encodeURIComponent(finalOrderId);
         }, 1500);
 
       } catch (err) {
@@ -245,7 +368,7 @@
 
       clearFieldValidation(document.getElementById('customer-name'), 'customer-name-error');
       clearFieldValidation(document.getElementById('customer-phone'), 'customer-phone-error');
-      clearFieldValidation(document.getElementById('customer-address'), 'customer-address-error');
+      clearFieldValidation(document.getElementById('house-number'), 'manual-address-error');
       const errorElement = document.getElementById('order-error');
       if (errorElement) {
         errorElement.style.display = 'none';
@@ -797,7 +920,7 @@
   </script>
 </head>
 <body>
-<nav class="navbar"><div class="container"><a href="index.html" class="nav-brand"><span class="red">HAJI'S</span><span class="sub">PAKISTANI & INDIAN FUSION</span></a><ul class="nav-links"><li><a href="index.html">Home</a></li><li><a href="menu.html">Menu</a></li><li><a href="order.html" class="active">Order Online</a></li><li><a href="track-order.html">TRACK ORDER</a></li><li><a href="gallery.html">Gallery</a></li><li><a href="catering.html">Catering</a></li><li><a href="reviews.html">Reviews</a></li><li><a href="about.html">About</a></li><li><a href="contact.html">Contact</a></li></ul><button class="nav-toggle" onclick="document.getElementById('mob-menu').classList.toggle('open')">☰</button></div><div id="mob-menu" class="nav-mobile"><a href="index.html">Home</a><a href="menu.html">Menu</a><a href="order.html">Order Online</a><a href="track-order.html">TRACK ORDER</a><a href="gallery.html">Gallery</a><a href="catering.html">Catering</a><a href="reviews.html">Reviews</a><a href="about.html">About</a><a href="contact.html">Contact</a></div></nav>
+<nav class="navbar"><div class="container"><a href="index.html" class="nav-brand"><span class="red">HAJI'S</span><span class="sub">PAKISTANI & INDIAN FUSION</span></a><ul class="nav-links"><li><a href="index.html">Home</a></li><li><a href="menu.html">Menu</a></li><li><a href="order.html" class="active">Order Online</a></li><li><a href="track-order.html" onclick="goToTrackOrder(event)">TRACK ORDER</a></li><li><a href="gallery.html">Gallery</a></li><li><a href="catering.html">Catering</a></li><li><a href="reviews.html">Reviews</a></li><li><a href="about.html">About</a></li><li><a href="contact.html">Contact</a></li><li id="nav-login"><a href="login.html">Login</a></li><li id="nav-signup"><a href="signup.html" class="btn-signup">Sign Up</a></li><li id="nav-logout" style="display:none;"><a href="#" onclick="logoutUser()">Logout</a></li></ul><button class="nav-toggle" onclick="document.getElementById('mob-menu').classList.toggle('open')">☰</button></div><div id="mob-menu" class="nav-mobile"><a href="index.html">Home</a><a href="menu.html">Menu</a><a href="order.html">Order Online</a><a href="track-order.html" onclick="goToTrackOrder(event)">TRACK ORDER</a><a href="gallery.html">Gallery</a><a href="catering.html">Catering</a><a href="reviews.html">Reviews</a><a href="about.html">About</a><a href="contact.html">Contact</a><a id="mob-login" href="login.html">Login</a><a id="mob-signup" href="signup.html" class="btn-signup">Sign Up</a><a id="mob-logout" href="#" onclick="logoutUser()" style="display:none;">Logout</a></div></nav>
 
 <div class="pt-20">
 <section class="section text-center">
@@ -844,10 +967,30 @@
           <input id="customer-phone" class="form-input" type="tel" placeholder="Phone Number" required>
           <span id="customer-phone-error" style="display:none;color:#ff6b6b;font-size:0.9rem;margin-top:6px;">Please enter a valid 11-digit Pakistani phone number starting with 03.</span>
         </div>
-        <div style="margin-bottom:14px;">
-          <textarea id="customer-address" class="form-input" rows="3" placeholder="Delivery Address" required></textarea>
-          <span id="customer-address-error" style="display:none;color:#ff6b6b;font-size:0.9rem;margin-top:6px;">Please enter an address at least 15 characters long.</span>
+        
+        <!-- Current Location Section -->
+        <div style="margin-bottom:14px; border:1px solid #444; border-radius:8px; padding:12px; background:#0a0a0a;">
+          <h4 style="margin:0 0 8px; color:#fff; font-size:1rem;">Current Location (GPS)</h4>
+          <button id="get-location-btn" class="btn btn-outline-gold" type="button" style="margin-bottom:8px;">Get My Current Location</button>
+          <div id="current-location-display" style="font-size:0.9rem; color:#ccc;"></div>
+          <input type="hidden" id="current-lat" />
+          <input type="hidden" id="current-lng" />
         </div>
+        
+        <!-- Manual Address Section -->
+        <div style="margin-bottom:14px; border:1px solid #444; border-radius:8px; padding:12px; background:#0a0a0a;">
+          <h4 style="margin:0 0 8px; color:#fff; font-size:1rem;">Delivery Address</h4>
+          <input id="house-number" class="form-input" type="text" placeholder="House/Flat Number" style="margin-bottom:8px;">
+          <input id="street-address" class="form-input" type="text" placeholder="Street Address" style="margin-bottom:8px;">
+          <input id="landmark" class="form-input" type="text" placeholder="Landmark (optional)" style="margin-bottom:8px;">
+          <span id="manual-address-error" style="display:none;color:#ff6b6b;font-size:0.9rem;margin-top:6px;">Please enter at least house number and street address.</span>
+        </div>
+        
+        <!-- Distance Warning -->
+        <div id="distance-warning" style="display:none; margin-bottom:14px; padding:10px; background:#ff6b6b; color:#fff; border-radius:8px; font-size:0.9rem;">
+          ⚠️ Warning: Your current location and delivery address appear to be far apart. Please verify the delivery address or confirm if this is correct.
+        </div>
+        
         <div class="payment-btns">
           <button id="payment-cash" class="payment-btn active" type="button">Cash on Delivery</button>
           <button id="payment-card" class="payment-btn" type="button">Card Payment</button>
@@ -861,6 +1004,11 @@
             <input id="card-expiry" class="form-input" type="text" placeholder="MM/YY" maxlength="5">
             <input id="card-cvv" class="form-input" type="text" placeholder="CVV" maxlength="4">
           </div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label for="orderNote" style="display:block; margin-bottom:8px; font-weight:600; color:#fff;">Special Instructions / Note</label>
+          <textarea id="orderNote" class="form-input" placeholder="Any special requests or instructions..." rows="3" style="width:100%; padding:10px; border:1px solid #444; border-radius:8px; background:#101010; color:#fff; resize:vertical;"></textarea>
         </div>
 
         <button class="btn-submit" type="button" id="place-order-btn">Place Order</button>
@@ -1125,7 +1273,78 @@ window.updateQuantity = updateQuantity;
 window.openChat = openChat;
 window.closeChat = closeChat;
 window.sendMessage = sendMessage;
+window.getCurrentLocation = getCurrentLocation;
 
+// Add event listeners
+document.addEventListener('DOMContentLoaded', () => {
+  // Get location button
+  const getLocationBtn = document.getElementById('get-location-btn');
+  if (getLocationBtn) {
+    getLocationBtn.addEventListener('click', getCurrentLocation);
+  }
+  
+  // Manual address fields for distance check
+  const houseField = document.getElementById('house-number');
+  const streetField = document.getElementById('street-address');
+  const landmarkField = document.getElementById('landmark');
+  
+  [houseField, streetField, landmarkField].forEach(field => {
+    if (field) {
+      field.addEventListener('input', checkDistance);
+    }
+  });
+  
+  // Place order button
+  const placeOrderBtn = document.getElementById('place-order-btn');
+  if (placeOrderBtn) {
+    placeOrderBtn.addEventListener('click', placeOrder);
+  }
+  
+  // Payment buttons
+  const cashBtn = document.getElementById('payment-cash');
+  const cardBtn = document.getElementById('payment-card');
+  const cardDetails = document.getElementById('card-details');
+  
+  if (cashBtn && cardBtn && cardDetails) {
+    cashBtn.addEventListener('click', () => {
+      cashBtn.classList.add('active');
+      cardBtn.classList.remove('active');
+      cardDetails.style.display = 'none';
+    });
+    
+    cardBtn.addEventListener('click', () => {
+      cardBtn.classList.add('active');
+      cashBtn.classList.remove('active');
+      cardDetails.style.display = 'block';
+    });
+  }
+});
+
+</script>
+<script type="module">
+  import { auth, onAuthStateChanged, signOut } from './firebase-config.js';
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      document.getElementById('nav-login').style.display = 'none';
+      document.getElementById('nav-signup').style.display = 'none';
+      document.getElementById('nav-logout').style.display = 'block';
+      document.getElementById('mob-login').style.display = 'none';
+      document.getElementById('mob-signup').style.display = 'none';
+      document.getElementById('mob-logout').style.display = 'block';
+    } else {
+      document.getElementById('nav-login').style.display = 'block';
+      document.getElementById('nav-signup').style.display = 'block';
+      document.getElementById('nav-logout').style.display = 'none';
+      document.getElementById('mob-login').style.display = 'block';
+      document.getElementById('mob-signup').style.display = 'block';
+      document.getElementById('mob-logout').style.display = 'none';
+    }
+  });
+  async function logoutUser() {
+    await signOut(auth);
+    window.location.href = 'index.html';
+  }
+  window.logoutUser = logoutUser;
 </script>
 </body>
 </html>
